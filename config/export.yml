@@ -1,0 +1,55 @@
+---
+:server_config: config/server.yml
+:output:
+  :announce: 2000                   # Every nth line, update the UI
+  :filename: export.csv
+  :headers: true
+  :level: :datapoint                # output one line per :server, :sample or :datapoint
+                                    # note that if you select :server, all the
+                                    # sample and datapoint vars will be nil
+
+  :filters:
+#    :sample:
+#      #:test_filter: data.sample.id > 1 and data.sample.id < 3
+#      :test_filter2: data.sample.id == 1
+#    :datapoint:
+#      :test_filter3: data.datapoint.id > 10
+  :format:
+    :sample_id: sample.id
+    :link_id: datapoint.id
+    :link_uri: datapoint.uri
+    :redirected:
+      :expr: "return data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/')"
+    :dns_time: datapoint.response.dns_lookup_time
+    :redirect_time: 
+      :var: datapoint.response.redirect_time
+      :condition: "x.to_f > 0"
+      :missing: ""
+    :rtt: datapoint.response.round_trip_time
+    :response_code: datapoint.response.code
+    :imperfect: 
+      :expr: "data.datapoint.response.code.to_i == 200"
+    :redirect_proportion:
+      :expr: >
+        r = data.datapoint.response
+
+        if(r.redirect_time > 0) then
+            return r.redirect_time.to_f / r.round_trip_time.to_f
+        else
+            return "NA"
+        end
+    #:l2: datapoint.id
+:logging:
+  :progname: Export 
+  :logs:
+    :default:
+      :dev: STDOUT                                                # STDOUT, STDERR or a filename are supported
+      :level: :info                                                # level to debug at
+    #:errors:
+      #:dev: 'logs/server.err'
+      #:level: :warn                                              
+    :file_log:
+      :dev: 'logs/export.log'
+      :level: :info
+
+

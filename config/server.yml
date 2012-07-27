@@ -1,0 +1,49 @@
+---
+:storage:
+  :root: corpus
+  :state_file: state.yml
+  :sample_subdir: samples
+  :sample_filename: sample.yml
+  :files_per_dir: 1000
+  :database:
+    :filename: links.db
+    :table: links
+    :transaction_limit: 100
+    :pragma:
+      "locking_mode": "EXCLUSIVE"
+      "cache_size": 20000
+      "synchronous": 0
+      "temp_store": 2
+    :fields:
+      :id: id
+      :uri: uri
+:sampling_policy:
+  #:sample_time: 86400       # Day long samples
+  :sample_time: 60       # minute long samples(!)
+  :sample_alignment: 0      # "align to midnight" (or 'round' minutes, in the case of minute-long samples)
+:client_management:
+  :time_per_link: 5    # Allow 5 seconds per link before timing out and resetting the client's assignments
+  :empty_client_backoff: 60 # If we find no links free, tell the client to wait for this time before trying again
+  :delay_overestimate: 10       # Tell the client to wait for n seconds after the sample is open
+:server:
+  :interfaces:
+    - 
+      :interface: localhost       # The interface to listen on
+      :port: 27400                  # The port to listen on
+    - 
+      :interface: 148.88.227.135    
+      :port: 27400                  # The port to listen on
+  :service_name: :downloader    # The service name exposed over marilyn
+:logging:
+  :progname: Server
+  :logs:
+    :default:
+      :dev: STDOUT                                                # STDOUT, STDERR or a filename are supported
+      :level: :debug                                              # level to debug at
+    #:errors:
+      #:dev: 'logs/server.err'
+      #:level: :warn                                              
+    :file_log:
+      :dev: 'logs/server.log'
+      :level: :info
+

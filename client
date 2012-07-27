@@ -1,0 +1,216 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+if __FILE__ != $0 then
+  $stderr.puts "This script is intended to be run directly."
+  exit(1)
+end
+require './lib/shared/launch_tools.rb'
+
+# Check for curl 
+if not gem_available?('curb') then
+  $stderr.puts "You must install the ruby CURL gem (curb) to proceed."
+  $stderr.puts "gem install -r curb"
+  exit(1)
+end
+Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
+Dir.glob(File.join(File.dirname(__FILE__), "lib", "client", "*.rb")).each{|x| require x}
+
+require 'marilyn-rpc'
+require 'eventmachine'
+require 'yaml'
+require 'timeout'
+
+
+class DownloadClient
+  def initialize(config)
+    # Start up the client
+    @config = config
+
+    # Generate a UUID and ensure the workers know it
+    generate_uuid
+    @config[:worker_pool][:client_uuid] = @uuid
+
+    # Reset the reconnection timer to the minimum wait
+    @reconnect_timer = @config[:network][:minimum_reconnect_time]
+
+    # Current working links
+    @links        = []
+    @datapoints   = []
+
+    # Should we really care about being able to contact the server?
+    @shutdown     = false
+
+    # Start the log with UUID info.
+    $log.info "Client started with UUID: #{@uuid}"
+  end
+
+  # Contact the server for work, do it, then send it back ad infinitum.
+  #
+  # Raise SIGINT to stop.
+  def work
+    loop do 
+      # Get a batch from the server
+      acquire_batch
+
+      # Process
+      process_links 
+
+      # Send completed points back to the server
+      send_batch
+    end
+
+  rescue SignalException => se
+    $log.fatal "Caught signal!"
+    @shutdown = true
+    $log.fatal "Will contact the server to cancel links..."
+    cancel_batch
+    $log.fatal "Done."
+    return
+  end
+
+
+
+private
+
+  # Actually download the links
+  # This starts up a worker pool, and waits until they are done.
+  def process_links
+    pool = WorkerPool.new(@config[:worker_pool], @links)
+    pool.init_workers
+    pool.work
+    @datapoints = pool.wait_and_get_datapoints
+    @datapoints.each{|dp| @links.delete(dp.link) }
+    pool.summarise
+  rescue SignalException => se
+    $log.fatal "Caught signal!"
+
+    # Clear up any worker threads and close their connections.
+    if pool then
+      $log.fatal "Currently processing links.  Killing workers..."
+      pool.kill_workers
+      $log.fatal "Done."
+    end
+
+    # Pass the exception up to halt the whole thing
+    raise se
+  end
+
+  def acquire_batch
+
+    loop do
+      @links = connect do |s|
+        s.check_out(@uuid, @config[:client][:batch_capacity])
+      end
+
+      # If the server tells us to back off, so do.
+      if(@links.class == Fixnum)
+        $log.info "Sleeping for #{@links}s until #{Time.now + @links} at the server's request."
+        sleep(@links)
+      elsif(@links.class == Array)
+        $log.info "Received #{@links.length}/#{@config[:client][:batch_capacity]} links from server."
+        return
+      else
+        $log.warn "Received unrecognised return from server of type: #{@links.class}.  Retrying..."
+        return
+      end
+    end
+  end
+
+  def send_batch
+    $log.info "Sending #{@datapoints.length} to server."
+    connect do |s|
+      s.check_in(@uuid, @datapoints)
+    end
+  end
+
+  def cancel_batch
+    return if(@links.class == Fixnum) # just in case we bail whilst waiting
+
+    $log.info "Cancelling at least #{@links.length} links."
+    connect do |s|
+      s.cancel(@uuid)
+    end
+  end
+
+  # Connect to the server
+  def connect(&block)
+    $log.debug "Connecting to server #{@config[:server][:address]}:#{@config[:server][:port]}..."
+    client = nil
+    while(not client) do
+      begin
+        Timeout::timeout(@config[:network][:connect_timeout]){
+          client = MarilynRPC::NativeClient.connect_tcp( @config[:server][:address], @config[:server][:port] )
+        }
+      rescue Exception => e
+        return if @shutdown
+        # In case of network error
+        case e
+        when Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
+          # Increase up to the limit set in the config file
+          @reconnect_timer = [@reconnect_timer + @config[:network][:connect_failure_penalty], @config[:network][:maximum_reconnect_time]].min
+        else
+          # Continue to pass error up
+          raise e
+        end
+        $log.error "Failed to connect (#{e}).  Reconnecting in #{@reconnect_timer}s."
+        sleep(@reconnect_timer)
+      end
+    end
+    # Reset the backoff timer now we have connected successfully
+    @reconnect_timer = @config[:network][:minimum_reconnect_time]
+
+    # Start doing things!  Register as a client
+    download_service = client.for(:downloader)
+    $log.debug "Done.  Yielding to perform actions."
+
+    response = nil
+    begin
+      response = yield(download_service)
+    rescue Exception => e
+      $log.error "Exception: #{e}"
+      $log.debug e.backtrace.join("\n")
+    end
+    
+    client.disconnect
+    $log.debug "Disconnected."
+
+    return response
+  end
+
+  # Create this client's ID.  
+  # Must be persistent across instances, but not across machines.
+  def generate_uuid
+    require 'socket'
+    # TODO: make this ID based more on IP address, and/or make it more readable
+    @uuid = @config[:client][:uuid_salt] + "_" + Digest::MD5.hexdigest("#{Socket.gethostname}#{@config[:client][:uuid_salt]}").to_s 
+  end
+
+end
+
+
+
+
+# -----------------------------------------------------------------------------
+  
+
+config = verify_and_launch
+
+
+
+
+# Start the client going
+dc = DownloadClient.new(config)
+dc.work
+$log.close
+
+
+
+
+
+
+
+
+
+
+
+

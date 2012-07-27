@@ -1,0 +1,239 @@
+#!/usr/bin/env ruby
+Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
+Dir.glob(File.join(File.dirname(__FILE__), "lib", "storage", "*.rb")).each{|x| require x}
+Dir.glob(File.join(File.dirname(__FILE__), "lib", "server", "*.rb")).each{|x| require x}
+
+require 'marilyn-rpc'
+require 'eventmachine'
+
+
+
+class DownloadServer
+  def initialize(config)
+    @config       = config
+    @dispatched   = {}
+    @cm           = ConsistencyManager.new(config)
+    @timeouts     = {}
+
+  end
+
+  # Returns either a list of Link objects or a delay to wait for (FixNum)
+  def check_out(client_id, request)
+    links = nil
+
+      $log.info "Client #{client_id} wishes to check out #{request} links."
+
+      # Tell the client to wait if the CM says to wait.
+      if(@cm.wait > 0)
+        $log.info "Telling client to wait #{@cm.wait + @config[:client_management][:delay_overestimate]} seconds."
+        return @cm.wait + @config[:client_management][:delay_overestimate]
+      end
+
+      # Check it has a hash to make everything else easier
+      @dispatched[client_id]  = {} if not @dispatched[client_id]  
+
+      # If the client has already been allocated links
+      if(@dispatched[client_id].values.length > 0)
+        $log.debug "Client #{client_id} already has some links checked out.  Will re-issue these instead."
+        links = @dispatched[client_id].values
+      else
+        # Else, check out some new ones
+        links                   = @cm.check_out(request)
+        links.each{|l|
+          @dispatched[client_id][l.id] = l
+        }
+      end
+
+      # If we found no links
+      if(links.length == 0)
+        # We found no links, so tell the client to wait until one of the others may have failed.
+        $log.info "Found no links for the client.  Told it to wait #{@config[:client_management][:empty_client_backoff]}s."
+        return @config[:client_management][:empty_client_backoff]
+      end
+
+
+      # Kill any old timeouts if the client tries to check out twice
+      @timeouts[client_id].kill if @timeouts[client_id]
+
+      # Register the new timeout and start a thread to call its cancel method
+      timeout = (@config[:client_management][:time_per_link] * @dispatched[client_id].length)
+      @timeouts[client_id] = Thread.new{ 
+        sleep(timeouts)
+        cancel_timeout(client_id)
+      }
+
+      $log.info "Dispatched #{@dispatched[client_id].length} links, timeout #{timeout}s"
+
+    summary
+
+    return links
+  end
+
+  # Returns either a list of link objects or nil to delete them
+  def check_in(client_id, datapoints)
+      $log.info"Client #{client_id} wishes to check in #{datapoints.length} datapoints."
+
+      # Check we have actually checked them out
+      check_in_list = []
+      datapoints.each{|dp|
+        if(@dispatched[client_id] and @dispatched[client_id].values.map{|l| l.id}.include? dp.link.id) then
+          $log.debug "Adding #{dp} to check-in list"
+          check_in_list << dp
+          @dispatched[client_id].delete(dp.link.id)
+        else
+          raise "Cannot check in what has not been checked out (by you)."
+        end
+      }
+
+      # then check them in
+      @cm.check_in(check_in_list)
+      
+      # Prevent the timeout firing
+      @timeouts[client_id].kill if @timeouts[client_id]
+      @timeouts[client_id] = nil
+
+      $log.info "Done."
+    
+    summary
+  end
+
+  # Returns nil
+  def cancel(client_id)
+      if(@dispatched[client_id]) then
+        $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} links." 
+
+        # Uncheck the item from the consistency manager
+        @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
+
+        # Then blank this client's list
+        @dispatched[client_id] = {} 
+
+        # Prevent any timeout firing
+        @timeouts[client_id].kill if @timeouts[client_id]
+        @timeouts[client_id] = nil
+
+
+        $log.info "Done."
+      else
+        $log.error "Client #{client_id} attempted to cancel links it does not have checked out."
+      end
+    
+    summary
+  end
+
+
+  # Close all resources and get ready to quit
+  def close
+    $log.fatal "Closing DownloadServer cleanly..."
+    @cm.close
+    $log.fatal "Done."
+  end
+
+private
+  # The client has not got back to us, so revoke its links
+  def cancel_timeout(client_id)
+      if(@dispatched[client_id]) then
+        # Alert the user
+        $log.warn "Cleaning up link assignments for dead client #{client_id}."
+
+        # Uncheck the item from the consistency manager
+        @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
+
+        # Then blank this client's list
+        @dispatched[client_id] = {} 
+        $log.info "Done."
+      else
+        $log.warn "Client #{client_id} cleaned its own links before disconnecting.  This is usually a sign it has caught a signal."
+      end
+    
+      @timeouts[client_id] = nil
+  end
+
+  # Present a list of clients and their checked out links.
+  def summary
+    str = ["#{@cm.summary}"]
+    str << "Summary of Clients:"
+    c = 0
+    @dispatched.each{|client, links|
+      str << "  (#{c+=1}/#{@dispatched.keys.length}) #{client} => #{links.values.length} links."
+    }
+    str.each{|s| $log.debug s }
+  end
+
+
+end
+
+
+# FIXME: avoid using a global for the server.
+
+class DownloadService < MarilynRPC::Service
+  # TODO: make this configurable
+  register :downloader
+  
+  # Ensure we handle only one thing at once
+  MUTEX = Mutex.new
+
+  # Send links to a user, and keep track of who asked for them
+  def check_out(client_id, number_requested)
+    MUTEX.synchronize{
+      $server.check_out(client_id, number_requested)
+    }
+  rescue Exception => e
+    $log.error "Exception: #{e}"
+    $log.debug e.backtrace.join("\n")
+  end
+  
+  # Accept datapoints back from the user
+  def check_in(client_id, datapoints)
+    MUTEX.synchronize{
+      $server.check_in(client_id, datapoints)
+    }
+  rescue Exception => e
+    $log.error "Exception: #{e}"
+    $log.debug e.backtrace.join("\n")
+  end
+
+  def cancel(client_id)
+    MUTEX.synchronize{
+      $server.cancel(client_id)
+    }
+  rescue Exception => e
+    $log.error "Exception: #{e}"
+    $log.debug e.backtrace.join("\n")
+  end
+end
+
+
+
+
+
+
+# -----------------------------------------------------------------------------
+if __FILE__ != $0 then
+  $stderr.puts "This script is intended to be run directly."
+  exit(1)
+end
+require './lib/shared/launch_tools.rb'
+config = verify_and_launch
+
+
+# Fire up the server
+$server = DownloadServer.new(config)
+
+$log.info "Registering exit handler for download server."
+at_exit{ $server.close }
+
+
+#
+$log.info "Listening for connections connections on:"
+EM.run{
+  config[:server][:interfaces].each{ |iface|
+    ip, port = iface[:interface], iface[:port]
+
+    $log.info "  #{ip}:#{port}"
+    EM.start_server(ip, port, MarilynRPC::Server)
+    # ALSO POSSIBLE:
+    #  EM.start_unix_domain_server("tmp.socket", MarilynRPC::Server)
+  }
+}
+$log.info "Unlistening!"
