@@ -75,10 +75,12 @@ private
   # Actually download the links
   # This starts up a worker pool, and waits until they are done.
   def process_links
+    $log.info "Creating worker pool and starting work..."
     pool = WorkerPool.new(@config[:worker_pool], @links)
     pool.init_workers
     pool.work
     @datapoints = pool.wait_and_get_datapoints
+    $log.info "Downloaded.  Checking in complete links..."
     @datapoints.each{|dp| @links.delete(dp.link) }
     pool.summarise
   rescue SignalException => se
@@ -117,9 +119,13 @@ private
   end
 
   def send_batch
-    $log.info "Sending #{@datapoints.length} to server."
-    connect do |s|
-      s.check_in(@uuid, @datapoints)
+    while(@datapoints.length > 0) do
+      @pending    = @datapoints.slice!(0, @config[:client][:check_in_rate])
+      $log.info "Sending #{@pending.length} datapoints (~#{(Marshal.dump(@pending).length.to_f / 1024.0 / 1024.0).round(2)}MB) to server..."
+      connect do |s|
+        s.check_in(@uuid, @pending)
+      end
+      $log.debug "Done."
     end
   end
 

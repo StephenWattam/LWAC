@@ -11,6 +11,7 @@
 :client:
   :uuid_salt: "LOCAL"
   :batch_capacity: 1000
+  :check_in_rate: 100
 :worker_pool:
   :simultaneous_workers: 50
   :body_not_text_placeholder: "<not text>"

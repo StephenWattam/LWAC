@@ -213,7 +213,7 @@ class WorkerPool
 
       # write to datapoint list
       @dpm.synchronize{ 
-        @dp << DataPoint.new(link, "", "", "", {}, @config[:client_uuid], e) 
+        @dp << DataPoint.new(link, "", "", "", {}, @config[:client_uuid], "#{e}") 
       }
 
       # update the counter.

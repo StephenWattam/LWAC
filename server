@@ -7,7 +7,6 @@ require 'marilyn-rpc'
 require 'eventmachine'
 
 
-
 class DownloadServer
   def initialize(config)
     @config       = config
@@ -71,28 +70,28 @@ class DownloadServer
 
   # Returns either a list of link objects or nil to delete them
   def check_in(client_id, datapoints)
-      $log.info"Client #{client_id} wishes to check in #{datapoints.length} datapoints."
+    $log.info"Client #{client_id} wishes to check in #{datapoints.length} datapoints."
 
-      # Check we have actually checked them out
-      check_in_list = []
-      datapoints.each{|dp|
-        if(@dispatched[client_id] and @dispatched[client_id].values.map{|l| l.id}.include? dp.link.id) then
-          $log.debug "Adding #{dp} to check-in list"
-          check_in_list << dp
-          @dispatched[client_id].delete(dp.link.id)
-        else
-          raise "Cannot check in what has not been checked out (by you)."
-        end
-      }
+    # Prevent the timeout firing
+    @timeouts[client_id].kill if @timeouts[client_id]
+    @timeouts[client_id] = nil
 
-      # then check them in
-      @cm.check_in(check_in_list)
-      
-      # Prevent the timeout firing
-      @timeouts[client_id].kill if @timeouts[client_id]
-      @timeouts[client_id] = nil
+    # Check we have actually checked them out
+    check_in_list = []
+    datapoints.each{|dp|
+      if(@dispatched[client_id] and @dispatched[client_id].values.map{|l| l.id}.include? dp.link.id) then
+        $log.debug "Adding #{dp} to check-in list"
+        check_in_list << dp
+        @dispatched[client_id].delete(dp.link.id)
+      else
+        $log.error "Client attempted to check in link #{dp.link.id}, which is not checked out to him."
+      end
+    }
 
-      $log.info "Done."
+    # then check them in
+    @cm.check_in(check_in_list)
+
+    $log.info "Done."
     
     summary
   end
@@ -173,6 +172,16 @@ class DownloadService < MarilynRPC::Service
   # Ensure we handle only one thing at once
   MUTEX = Mutex.new
 
+  def test(client_id, payload)
+    MUTEX.synchronize{
+      $log.info "Received test from #{client_id}"
+      $log.info "Payload: #{payload.to_s}"
+    }
+  rescue Exception => e
+    $log.error "Exception: #{e}"
+    $log.debug e.backtrace.join("\n")
+  end
+
   # Send links to a user, and keep track of who asked for them
   def check_out(client_id, number_requested)
     MUTEX.synchronize{
@@ -185,6 +194,7 @@ class DownloadService < MarilynRPC::Service
   
   # Accept datapoints back from the user
   def check_in(client_id, datapoints)
+    $log.info "Received test from #{client_id}"
     MUTEX.synchronize{
       $server.check_in(client_id, datapoints)
     }
