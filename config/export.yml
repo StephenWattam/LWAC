@@ -19,11 +19,11 @@
     :link_id: datapoint.id
     :link_uri: datapoint.uri
     :redirected:
-      :expr: "return data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/')"
+      :expr: "return (data.datapoint.response.effective_uri and data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/'))"
     :dns_time: datapoint.response.dns_lookup_time
     :redirect_time: 
       :var: datapoint.response.redirect_time
-      :condition: "x.to_f > 0"
+      :condition: "(x and x.to_f > 0)"
       :missing: ""
     :rtt: datapoint.response.round_trip_time
     :response_code: datapoint.response.code
@@ -33,7 +33,7 @@
       :expr: >
         r = data.datapoint.response
 
-        if(r.redirect_time > 0) then
+        if(r.redirect_time and r.redirect_time > 0) then
             return r.redirect_time.to_f / r.round_trip_time.to_f
         else
             return "NA"

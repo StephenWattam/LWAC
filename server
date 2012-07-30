@@ -20,48 +20,48 @@ class DownloadServer
   def check_out(client_id, request)
     links = nil
 
-      $log.info "Client #{client_id} wishes to check out #{request} links."
+    $log.info "Client #{client_id} wishes to check out #{request} links."
 
-      # Tell the client to wait if the CM says to wait.
-      if(@cm.wait > 0)
-        $log.info "Telling client to wait #{@cm.wait + @config[:client_management][:delay_overestimate]} seconds."
-        return @cm.wait + @config[:client_management][:delay_overestimate]
-      end
+    # Tell the client to wait if the CM says to wait.
+    if(@cm.wait > 0)
+      $log.info "Telling client to wait #{@cm.wait + @config[:client_management][:delay_overestimate]} seconds."
+      return @cm.wait + @config[:client_management][:delay_overestimate]
+    end
 
-      # Check it has a hash to make everything else easier
-      @dispatched[client_id]  = {} if not @dispatched[client_id]  
+    # Check it has a hash to make everything else easier
+    @dispatched[client_id]  = {} if not @dispatched[client_id]  
 
-      # If the client has already been allocated links
-      if(@dispatched[client_id].values.length > 0)
-        $log.debug "Client #{client_id} already has some links checked out.  Will re-issue these instead."
-        links = @dispatched[client_id].values
-      else
-        # Else, check out some new ones
-        links                   = @cm.check_out(request)
-        links.each{|l|
-          @dispatched[client_id][l.id] = l
-        }
-      end
-
-      # If we found no links
-      if(links.length == 0)
-        # We found no links, so tell the client to wait until one of the others may have failed.
-        $log.info "Found no links for the client.  Told it to wait #{@config[:client_management][:empty_client_backoff]}s."
-        return @config[:client_management][:empty_client_backoff]
-      end
-
-
-      # Kill any old timeouts if the client tries to check out twice
-      @timeouts[client_id].kill if @timeouts[client_id]
-
-      # Register the new timeout and start a thread to call its cancel method
-      timeout = (@config[:client_management][:time_per_link] * @dispatched[client_id].length)
-      @timeouts[client_id] = Thread.new{ 
-        sleep(timeouts)
-        cancel_timeout(client_id)
+    # If the client has already been allocated links
+    if(@dispatched[client_id].values.length > 0)
+      $log.debug "Client #{client_id} already has some links checked out.  Will re-issue these instead."
+      links = @dispatched[client_id].values
+    else
+      # Else, check out some new ones
+      links                   = @cm.check_out(request)
+      links.each{|l|
+        @dispatched[client_id][l.id] = l
       }
+    end
 
-      $log.info "Dispatched #{@dispatched[client_id].length} links, timeout #{timeout}s"
+    # If we found no links
+    if(links.length == 0)
+      # We found no links, so tell the client to wait until one of the others may have failed.
+      $log.info "Found no links for the client.  Told it to wait #{@config[:client_management][:empty_client_backoff]}s."
+      return @config[:client_management][:empty_client_backoff]
+    end
+
+
+    # Kill any old timeouts if the client tries to check out twice
+    @timeouts[client_id].kill if @timeouts[client_id]
+
+    # Register the new timeout and start a thread to call its cancel method
+    timeout = (@config[:client_management][:time_per_link] * @dispatched[client_id].length)
+    @timeouts[client_id] = Thread.new{ 
+      sleep(timeouts)
+      cancel_timeout(client_id)
+    }
+
+    $log.info "Dispatched #{@dispatched[client_id].length} links, timeout #{timeout}s"
 
     summary
 
@@ -98,24 +98,24 @@ class DownloadServer
 
   # Returns nil
   def cancel(client_id)
-      if(@dispatched[client_id]) then
-        $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} links." 
+    if(@dispatched[client_id]) then
+      $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} links." 
 
-        # Uncheck the item from the consistency manager
-        @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
+      # Uncheck the item from the consistency manager
+      @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
 
-        # Then blank this client's list
-        @dispatched[client_id] = {} 
+      # Then blank this client's list
+      @dispatched[client_id] = {} 
 
-        # Prevent any timeout firing
-        @timeouts[client_id].kill if @timeouts[client_id]
-        @timeouts[client_id] = nil
+      # Prevent any timeout firing
+      @timeouts[client_id].kill if @timeouts[client_id]
+      @timeouts[client_id] = nil
 
 
-        $log.info "Done."
-      else
-        $log.error "Client #{client_id} attempted to cancel links it does not have checked out."
-      end
+      $log.info "Done."
+    else
+      $log.error "Client #{client_id} attempted to cancel links it does not have checked out."
+    end
     
     summary
   end
@@ -150,13 +150,32 @@ private
 
   # Present a list of clients and their checked out links.
   def summary
-    str = ["#{@cm.summary}"]
+    co, sample, remain, stime = @cm.counts
+
+    # Debug info
+    str = ["CM: #{co}/#{sample} checked out (#{remain} remaining)."]
     str << "Summary of Clients:"
     c = 0
     @dispatched.each{|client, links|
       str << "  (#{c+=1}/#{@dispatched.keys.length}) #{client} => #{links.values.length} links."
     }
     str.each{|s| $log.debug s }
+
+
+    # Say progress
+    $log.info "#{co}/#{sample} links checked out. #{remain} (#{(remain.to_f/sample.to_f * 100.0).round(2)}%) remaining."
+
+    puts stime.to_s
+
+    # Compute ETA
+    done  = sample - (remain + co)
+    if stime and done > 0
+      tdiff = Time.now.to_i - (stime || Time.at(0)).to_i
+      rate  = tdiff.to_f / done.to_f
+      eta   = Time.at(Time.now.to_i + (rate * remain))
+      $log.info "Processing at #{(rate * 60*60).round(1)} links/hr --- ETA #{eta}"
+    end
+
   end
 
 
@@ -172,15 +191,15 @@ class DownloadService < MarilynRPC::Service
   # Ensure we handle only one thing at once
   MUTEX = Mutex.new
 
-  def test(client_id, payload)
-    MUTEX.synchronize{
-      $log.info "Received test from #{client_id}"
-      $log.info "Payload: #{payload.to_s}"
-    }
-  rescue Exception => e
-    $log.error "Exception: #{e}"
-    $log.debug e.backtrace.join("\n")
-  end
+  #def test(client_id, payload)
+    #MUTEX.synchronize{
+      #$log.info "Received test from #{client_id}"
+      #$log.info "Payload: #{payload.to_s}"
+    #}
+  #rescue Exception => e
+    #$log.error "Exception: #{e}"
+    #$log.debug e.backtrace.join("\n")
+  #end
 
   # Send links to a user, and keep track of who asked for them
   def check_out(client_id, number_requested)
@@ -190,19 +209,21 @@ class DownloadService < MarilynRPC::Service
   rescue Exception => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
+    return []
   end
   
   # Accept datapoints back from the user
   def check_in(client_id, datapoints)
-    $log.info "Received test from #{client_id}"
     MUTEX.synchronize{
       $server.check_in(client_id, datapoints)
     }
   rescue Exception => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
+    return nil
   end
 
+  # Cancel links ahead of time
   def cancel(client_id)
     MUTEX.synchronize{
       $server.cancel(client_id)
@@ -210,6 +231,7 @@ class DownloadService < MarilynRPC::Service
   rescue Exception => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
+    return nil
   end
 end
 

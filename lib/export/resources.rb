@@ -72,7 +72,7 @@ class Resource
 
 private
   def sanitise_paramname(p)
-    p.to_s.gsub(/[\s\-]/, "_")
+    p.to_s.gsub(/[\s]/, "_").gsub(/[^a-zA-Z0-9_]/, "_")
   end
 end
 

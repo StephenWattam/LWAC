@@ -157,7 +157,7 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
                 :complete             => as.complete?,
                 :open                 => as.open?,
                 :size                 => as.size,
-                :duration             => as.sample_end_time - as.sample_start_time,
+                :duration             => (as.sample_end_time && as.sample_start_time) ? as.sample_end_time - as.sample_start_time : 0,
                 :start_time_s         => as.sample_start_time.to_i,
                 :end_time_s           => as.sample_end_time.to_i,
                 :num_pending_links    => as.pending_links.length,
@@ -186,16 +186,16 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
             # Load from disk
             dp = storage.read_datapoint( link_id, as )
 
-            datapoint = {:id            => dp.link.id,
-                         :uri           => dp.link.uri,
+            datapoint = {:id            => dp.link.id     || "",
+                         :uri           => dp.link.uri    || "",
                          :path          => nil, # TODO
                          :dir           => nil, # TODO
-                         :client_id     => dp.client_id,
-                         :error         => dp.error,
-                         :headers       => dp.headers,
-                         :head          => dp.head,
-                         :body          => dp.body,
-                         :response      => dp.response_properties
+                         :client_id     => dp.client_id   || "",
+                         :error         => dp.error       || "",
+                         :headers       => dp.headers     || {},
+                         :head          => dp.head        || "",
+                         :body          => dp.body        || "",
+                         :response      => dp.response_properties || {}
                         }
             data.datapoint = Resource.new("datapoint", datapoint)
             #puts data.describe

@@ -38,7 +38,7 @@ class ConsistencyManager
     end
     $log.info "Current sample: #{@state.current_sample}."
     if(@state.current_sample.open?) 
-      $log.info "Sample is open, resuming..."
+      $log.info "Sample opened at #{@state.current_sample.sample_start_time}, resuming..."
     else
       if(wait < 0)
         $log.info "Sample is closed but ready to open."
@@ -49,9 +49,14 @@ class ConsistencyManager
 
   end
 
-  def summary
-    "CM: #{@checked_out_links.values.length}/#{@state.current_sample.size} checked out (#{@links.length} remaining)."
+  def counts
+    start_time = (@state.current_sample) ? @state.current_sample.sample_start_time : nil
+    return @checked_out_links.values.length, 
+           @state.current_sample.size, 
+           @links.length, 
+           start_time
   end
+
 
   # Retrieve links
   def check_out(number = :all)

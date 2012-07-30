@@ -39,7 +39,7 @@
   :logs:
     :default:
       :dev: STDOUT                                                # STDOUT, STDERR or a filename are supported
-      :level: :debug                                              # level to debug at
+      :level: :info                                              # level to debug at
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

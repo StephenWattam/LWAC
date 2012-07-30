@@ -111,8 +111,10 @@ end
 #                      :missing => "value for when it's missing, default is """ }
 def produce_output_line( data, format )
   line = []
-  
+ 
+  current = nil
   format.each{|f, v|
+    current = f
     $log.debug "Processing field #{f}..."
 
     # Look up info
@@ -135,13 +137,14 @@ def produce_output_line( data, format )
     # add to line
     line << val
   }
+  current = nil
 
   return line 
 
 rescue Exception => e
   $log.fatal "Error producing output: #{e}"
   $log.fatal "This is probably a bug in your formatting expressions."
-  $log.fatal "Current state: formatting #{f}." if defined? f
+  $log.fatal "Currently formatting '#{current}'." if current
   $log.fatal "Backtrace: \n#{e.backtrace.join("\n")}"
   exit(1)
 end
