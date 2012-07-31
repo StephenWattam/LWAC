@@ -43,7 +43,7 @@ class ConsistencyManager
       if(wait < 0)
         $log.info "Sample is closed but ready to open."
       else
-        $log.info "Sample closed: wait #{wait}s before sampling."
+        $log.info "Sample closed: wait #{wait}s before sampling until #{Time.at(Time.now.to_i + wait)}."
       end
     end
 
@@ -60,7 +60,7 @@ class ConsistencyManager
 
   # Retrieve links
   def check_out(number = :all)
-    raise "Cannot check out links.  Wait #{wait}s." if wait > 0
+    raise "Cannot check out links.  Wait #{wait}s until #{Time.at(Time.now.to_i + wait)}." if wait > 0
     if not @state.current_sample.open? then
       @state.current_sample.open_sample 
       @storage.write_sample 
@@ -109,7 +109,7 @@ class ConsistencyManager
 
   # Check links in, write the return to disk
   def check_in(datapoints = [])
-    raise "Cannot check in whilst waiting.  Wait #{wait}s." if wait > 0
+    raise "Cannot check in whilst waiting.  Wait #{wait}s until #{Time.at(Time.now.to_i + wait)}." if wait > 0
 
     @mutex.synchronize{
       # Check in each datapoint
