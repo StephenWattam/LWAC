@@ -163,14 +163,14 @@ private
 
 
     # Say progress
-    $log.info "#{co}/#{remain}/#{co+remain}/#{sample} links checked out/available/remaining/total (#{((remain + co).to_f/sample.to_f * 100.0).round(2)}% to go)."
+    $log.info "#{co} + #{remain} = #{co+remain}/#{sample} links checked out + available = remaining/total (#{((remain + co).to_f/sample.to_f * 100.0).round(2)}%)."
 
     # Compute ETA
     done  = sample - (remain + co)
     if stime and done > 0
       tdiff = Time.now.to_i - (stime || Time.at(0)).to_i
       rate  = done.to_f / tdiff.to_f
-      eta   = Time.at(Time.now.to_i + (rate * remain))
+      eta   = Time.now + (rate * remain).to_i
       $log.info "Processing at #{(rate * 60*60).round(1)} links/hr --- ETA #{eta}"
     end
 
