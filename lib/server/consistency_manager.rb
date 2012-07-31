@@ -191,7 +191,7 @@ private
     @state.next_sample_due        = compute_next_sample_time
     
     # Tell people
-    $log.info "*** Opened new sample to commence on #{Time.at(@state.next_sample_due).utc}"
+    $log.info "*** Opened new sample to commence on #{Time.at(@state.next_sample_due)}"
     $log.info "Estimated completion time: #{Time.at(@state.next_sample_due.to_i + @state.last_sample_duration.to_i)}"
    
     # Ensure we don't lose it if we're forced to close 

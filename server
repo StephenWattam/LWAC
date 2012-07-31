@@ -171,7 +171,7 @@ private
     done  = sample - (remain + co)
     if stime and done > 0
       tdiff = Time.now.to_i - (stime || Time.at(0)).to_i
-      rate  = tdiff.to_f / done.to_f
+      rate  = done.to_f / tdiff.to_f
       eta   = Time.at(Time.now.to_i + (rate * remain))
       $log.info "Processing at #{(rate * 60*60).round(1)} links/hr --- ETA #{eta}"
     end
