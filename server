@@ -57,11 +57,11 @@ class DownloadServer
     # Register the new timeout and start a thread to call its cancel method
     timeout = (@config[:client_management][:time_per_link] * @dispatched[client_id].length)
     @timeouts[client_id] = Thread.new{ 
-      sleep(timeouts)
+      sleep(timeout)
       cancel_timeout(client_id)
     }
 
-    $log.info "Dispatched #{@dispatched[client_id].length} links, timeout #{timeout}s"
+    $log.info "Dispatched #{@dispatched[client_id].length} link[s], timeout #{timeout}s (#{Time.now + timeout})"
 
     summary
 
@@ -70,23 +70,30 @@ class DownloadServer
 
   # Returns either a list of link objects or nil to delete them
   def check_in(client_id, datapoints)
-    $log.info"Client #{client_id} wishes to check in #{datapoints.length} datapoints."
+    $log.info"Client #{client_id} wishes to check in #{datapoints.length} datapoint[s]."
 
-    # Prevent the timeout firing
-    @timeouts[client_id].kill if @timeouts[client_id]
-    @timeouts[client_id] = nil
+
 
     # Check we have actually checked them out
     check_in_list = []
+    erroneous     = 0
     datapoints.each{|dp|
       if(@dispatched[client_id] and @dispatched[client_id].values.map{|l| l.id}.include? dp.link.id) then
         $log.debug "Adding #{dp} to check-in list"
         check_in_list << dp
         @dispatched[client_id].delete(dp.link.id)
       else
-        $log.error "Client attempted to check in link #{dp.link.id}, which is not checked out to him."
+        erroneous += 1 
       end
     }
+
+    $log.error "Attempt to check in #{erroneous} datapoint[s] which were not checked out to him." if erroneous > 0
+
+    # Prevent the timeout firing
+    if(@dispatched[client_id].length == 0) then
+      @timeouts[client_id].kill if @timeouts[client_id]
+      @timeouts[client_id] = nil
+    end
 
     # then check them in
     @cm.check_in(check_in_list)
@@ -99,7 +106,7 @@ class DownloadServer
   # Returns nil
   def cancel(client_id)
     if(@dispatched[client_id]) then
-      $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} links." 
+      $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} link[s]." 
 
       # Uncheck the item from the consistency manager
       @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
@@ -131,21 +138,21 @@ class DownloadServer
 private
   # The client has not got back to us, so revoke its links
   def cancel_timeout(client_id)
-      if(@dispatched[client_id]) then
-        # Alert the user
-        $log.warn "Cleaning up link assignments for dead client #{client_id}."
+    if(@dispatched[client_id]) then
+      # Alert the user
+      $log.warn "Cleaning up link assignments for dead client #{client_id}."
 
-        # Uncheck the item from the consistency manager
-        @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
+      # Uncheck the item from the consistency manager
+      @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
 
-        # Then blank this client's list
-        @dispatched[client_id] = {} 
-        $log.info "Done."
-      else
-        $log.warn "Client #{client_id} cleaned its own links before disconnecting.  This is usually a sign it has caught a signal."
-      end
-    
-      @timeouts[client_id] = nil
+      # Then blank this client's list
+      @dispatched[client_id] = {} 
+      $log.info "Done."
+    else
+      $log.warn "Client #{client_id} cleaned its own links before disconnecting.  This is usually a sign it has caught a signal."
+    end
+  
+    @timeouts[client_id] = nil
   end
 
   # Present a list of clients and their checked out links.

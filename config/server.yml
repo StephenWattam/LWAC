@@ -22,7 +22,7 @@
   :sample_time: 60       # minute long samples(!)
   :sample_alignment: 0      # "align to midnight" (or 'round' minutes, in the case of minute-long samples)
 :client_management:
-  :time_per_link: 5    # Allow 5 seconds per link before timing out and resetting the client's assignments
+  :time_per_link: 1    # Allow 1 seconds per link before timing out and resetting the client's assignments
   :empty_client_backoff: 60 # If we find no links free, tell the client to wait for this time before trying again
   :delay_overestimate: 10       # Tell the client to wait for n seconds after the sample is open
 :server:
