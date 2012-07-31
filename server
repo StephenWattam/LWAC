@@ -163,9 +163,7 @@ private
 
 
     # Say progress
-    $log.info "#{co}/#{sample} links checked out. #{remain} (#{((remain + co).to_f/sample.to_f * 100.0).round(2)}%) remaining."
-
-    #puts stime.to_s
+    $log.info "#{co}/#{remain}/#{co+remain}/#{sample} links checked out/available/remaining/total (#{((remain + co).to_f/sample.to_f * 100.0).round(2)}% to go)."
 
     # Compute ETA
     done  = sample - (remain + co)

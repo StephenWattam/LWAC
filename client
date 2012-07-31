@@ -107,13 +107,12 @@ private
       # If the server tells us to back off, so do.
       if(@links.class == Fixnum)
         $log.info "Sleeping for #{@links}s until #{Time.now + @links} at the server's request."
-        sleep(@links)
+        sleep([@links, @config[:network][:maximum_reconnect_time]].min)
       elsif(@links.class == Array)
         $log.info "Received #{@links.length}/#{@config[:client][:batch_capacity]} links from server."
         return
       else
         $log.warn "Received unrecognised return from server of type: #{@links.class}.  Retrying..."
-        return
       end
     end
   end
