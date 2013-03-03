@@ -22,13 +22,37 @@
 \usepackage{graphicx}
 %\setlength\titlebox{6.5cm}    % You can expand the title box if you
 % really have to
+%
+\usepackage{hyperref}
+\hypersetup{
+    hidelinks=true,
+    unicode=true,   % Enable the 21st century
+    pdfborder={0,0,0,[]},
+    pdfauthor={Stephen Wattam},
+    linkbordercolor={0 0 0},
+    citebordercolor={0 0 0},
+    urlbordercolor={0 0 0},
+    urlcolor=black,
+    filecolor=black,
+    citecolor=black,
+    linkcolor=black,
+    colorlinks=true,
+    bookmarks=true
+}
 
-\title{CoolName2k: Longitudinal Web Sampling for Fun and Profit}
 
-\author{Stephen Wattam \\\And
-  Paul Rayson\\\And
-  Damon Berridge\\\AND
+\newcommand{\toolname}{LWAC}
+\newcommand{\superscript}[1]{{\small \ensuremath{^{\textrm{#1}}}}}
+\newcommand{\subscript}[1]{{\small \ensuremath{_{\textrm{#1}}}}}
+
+
+\title{\toolname: Longitudinal Web-as-Corpus Sampling}
+
+\author{Stephen Wattam\superscript{1}\\\And
+  Paul Rayson\superscript{1}\\\And
+  Damon Berridge\superscript{2}\\\AND
   Lancaster University\\
+  School of Computing and Communications\superscript{1}, Mathematics and Statistics\superscript{2}\\
   {\tt f.lastname@lancs.ac.uk}\\
 }
 
@@ -40,19 +64,22 @@
 
 \section{Sampling}
 
-Many sampling efforts for linguistic data on the web are heavily focused on producing results comparable to conventional corpora.  These typically take two forms: those based on URI lists (typically derived from search engine data, as in~\cite{sharoff2006creating}), and those formed through crawling.
+Many sampling efforts for linguistic data on the web are heavily focused on producing results comparable to conventional corpora.  These typically take two forms: those based on URI lists (e.g. from search results, as in~\cite{sharoff2006creating}, BE06~\cite{baker2009be06}, BootCat~\cite{baroni2004bootcat}), and those formed through crawling (e.g. enTenTen (FIXME), %~\cite{}, %FIXME
+UKWaC~\cite{ferraresi2008introducing}).
 
-Though initial efforts in WaC first focused on the former, in part due to concerns over the balance of samples returned, many projects are now focused on constructing supercorpora, which may themselves be searched with greater precision than the 'raw' web, in line with Kilgarriff's vision of linguistic search engines~\cite{kilgarriff2003linguistic}.  This has led to the proliferation of crawlers such as those mentioned in~\cite{schafer8building} and~\cite{renouf2003webcorp}.
+Though initial efforts in web-as-corpus (WaC) first focused on the former method %, in part due to concerns over the balance of samples returned, 
+many projects are now focused on constructing supercorpora, which may themselves be searched with greater precision than the `raw' web, in line with Kilgarriff's vision of linguistic search engines~\cite{kilgarriff2003linguistic}.  This has led to the proliferation of crawlers such as those used in~\cite{schafer8building} and~\cite{renouf2003webcorp}.
 
 % diachronic work with webcorp.
 % \cite{kehoe2006diachronic}
 % \cite{kehoe2009weaving}
 
-This approach, with its base in a continually-growing supercorpus, parallels the strategy of a monitor corpus~\cite{sinclair1982monitor}, and is applicable to a linguistic inquiry concerned with diachronic properties~\cite{kehoe2006diachronic}.  Indeed, we could conclude that the web is mature enough to require date-based lookup when retrieving articles, and such tools are increasingly being included in consumer search engines such as Google.
+This approach, with its base in a continually-growing supercorpus, parallels the strategy of a monitor corpus~\cite{sinclair1982monitor}, and is applicable to linguistic inquiry concerned with diachronic properties~\cite{kehoe2006diachronic}.  Indeed, we could conclude that the web is mature enough to require date-based lookup in casual use, and such tools are increasingly being included in consumer search engines such as Google.
 
-This repeated sampling approach tells us about the state of language change online in a manner that is immediately comparable to other diachronic corpora, however, it omits subtler technical aspects that govern consumption of data online, most notably the URI of the data, and variation in where this points over time.  Low publishing costs online, paired with increasing corporate oversight and reputation management, leads to a situation where this content is being updated frequently, often without end users even noticing.
+This crawling approach to repeated sampling tells us about the state of language change online in a manner that is comparable to other diachronic corpora, however, it omits subtler technical aspects that govern consumption of data online, most notably the user's impression of its location, as defined by the URI.  Low publishing costs online, paired with increasing corporate oversight and reputation management, (both personal~\cite{ICT4DBibliography1650} and professional~\cite{Malaga2000repman})
+, leads to a situation where this content is being revised frequently, often without users even noticing.
 
-This URI-oriented change has been studied from a technical perspective by those interested in managing and maintaining network infrastructure, and optimising the maintenance of search engine databases~\cite{koehler2004longitudinal}.  The needs of these parties are quite aside from those of corpus researchers, however, since they focus around a best-effort database of information, rather than a dependable sample (which must have known margins for error).
+This URI-oriented change has been studied from a technical perspective by those interested in managing and maintaining network infrastructure, compiling digital libraries~\cite{tyler2003librarians}, and optimising the maintenance of search engine databases~\cite{koehler2004longitudinal}.  The needs of these parties are quite aside from those of corpus researchers, however, since they focus around a best-effort database of information, rather than a dependable longitudinal sample with known margins for error.
 % 
 % \begin{itemize}
 %     \item \textsl{Incremental sampling}---Search engine databases and digital archives are persistent, and may be incrementally updated in a continuous manner whilst still being useful;
@@ -63,7 +90,7 @@ This URI-oriented change has been studied from a technical perspective by those 
 % 
 
 
-We present here a tool for this form of longitudinal sampling, designed to maximise the comparability of documents downloaded in each sample in terms of their URI rather than content.  To accomplish this, we use a batch-mode sampling strategy, as illustrated in Figure~\ref{fig:sampling}, to get full coverage over a list of URIs, at the expense of sampling new content.
+We present here a tool, \toolname, for this form of longitudinal sampling, designed to maximise the comparability of documents downloaded in each sample in terms of their URI rather than content.  To accomplish this, we use a batch-mode sampling strategy, as illustrated in Figure~\ref{fig:sampling}, to get full coverage over a list of URIs, at the expense of sampling new content.
 
 \begin{figure}[h]
 \centering
@@ -72,8 +99,25 @@ We present here a tool for this form of longitudinal sampling, designed to maxim
 \label{fig:sampling}
 \end{figure}
 
-\section{Aims}
-The tool is designed to construct longitudinal samples from URI lists, using only commodity hardware.  It is designed with `full storage' in mind, that is, recording everything about each HTTP session in such a way that it may later be exported and accessed in a parsimonious manner.
+\section{Applications}
+This strategy allows us to investigate how language may change in relation to technical and social events in a way that mimics the experience of the end user, and offers a useful perspective on many epistemic problems of WaC methods, to determine:
+
+\begin{itemize}
+    \item The portions of web pages that typically change as main content regions;
+        \vspace{-4pt}
+    \item The impact of social feedback and user generated content on page content;
+        \vspace{-4pt}
+    \item How censorship, redaction and revision affect website contents;
+        \vspace{-4pt}
+    \item Website resource persistence and its relation to linguistic content (link rot/document attrition);
+        \vspace{-4pt}
+    \item How institutions' publishing policies affect reporting of current events.
+\end{itemize}
+
+In order to maximise its coverage of these topics, \toolname~is designed to construct longitudinal samples from arbitrary URI lists, using commodity hardware, in a way that mimics the user's experience of a website.  
+
+
+% The tool is designed to construct longitudinal samples from URI lists, using only commodity hardware.  It is designed with `full storage' in mind, that is, recording everything about each HTTP session in such a way that it may later be exported and accessed in a parsimonious manner.
 
 \section{Architecture}
 
@@ -83,32 +127,28 @@ The tool is designed to construct longitudinal samples from URI lists, using onl
 \caption{System Architecture}
 \label{fig:arch}
 \end{figure}
-In order to maximise the simultaneity of a given sample, a parallel, distributed architecture was selected (Figure~\ref{fig:arch}).  This also yields technical benefits of throughput (especially where the internet connection is a bottleneck), and the ability to differentiate between websites that are blocked for a given area of the internet and those that are offline `proper'.
+
+In order to form a useful longitudinal sample, each data point should be as cross-sectional as possible.  As such, a highly parallel, distributed architecture was selected (Figure~\ref{fig:arch}).  This yields technical benefits in terms of throughput (especially where the internet connection is a bottleneck), flexibility, and the ability to differentiate between websites that are blocked for a given area of the internet and those that are offline `proper'.
 
 Data storage in the system is split between metadata, stored in an SQLite database, and website sample data itself, which is stored as raw HTTP response data in a versioned structure, compressed using hard links\footnote{Linked in a similar manner to \texttt{rsync}'s \texttt{-H} option.}.  The storage format is optimised for large samples, and is nested in order to avoid common filesystem limits.
 
-The download process itself is managed by a central server, which co-ordinates storage and metadata access in order to provide atomicity and recording of sample data.  This central server distributes batch jobs, according to policies governing reliability and throughput, to worker servers, which compete for the opportunity to download websites.
+The download process itself is managed by a central server, which co-ordinates storage and metadata access in order to provide full atomicity and recording of sample data.  This central server distributes batch jobs, according to policies governing reliability and throughput, to worker servers, which compete for the opportunity to download websites.
 
-Workers imitate, as far as possible, the behaviour of real users.  They retain cookies and present typical user-agent and referrer strings in their request headers.
+In order to avoid search engine optimisation tricks, workers imitate the behaviour of end users' browsers: they retain cookies and present typical user-agent and referrer strings in their request headers.
 
 \section{Performance}
-In order to obtain the most simultaneous samples, the system was designed to maximise the parallel number of connections on each client.  This eventually led to exceeding the limits of the underlying operating system, which in our tests showed a practical maximum of 120 simultaneous downloads\footnote{Using the Linux 2.8 kernel}.
+In order to obtain the most simultaneous samples, the system was designed to maximise the parallel number of connections on each client.  This is limited by the underlying OS, which in our tests showed a practical maximum of 120 simultaneous downloads\footnote{Using the Linux 2.8 kernel}.
 
-In practice, throughput is defined both by the external servers and this parallelism limit---reducing timeouts for failed DNS and HTTP connections leads to significant improvements later on in a sample where many hosts have fallen offline.  With low failure rates, the system is capable of downloading millions of pages in a 24-hour period.
+In practice, throughput is limited by several factors, among them the available bandwidth, number of worker servers, speed of DNS lookups, and the proportion of links which are destined to time out during connection.  In testing, each worker proved capable of downloading at a sustained 8-12MBps, depending on job size and remote server properties.
+% and use of two worker servers produces download rates of 0.2 to 0.3 million links an hour, with favourable remote server conditions.
 
-As with many downloaders, it is possible to exceed polite limits of server usage with an internet connection of even modest throughput.
+% throughput is defined both by the external servers and this parallelism limit---reducing timeouts for failed DNS and HTTP connections leads to significant improvements later on in a sample where many hosts have fallen offline.  With low failure rates, the system is capable of downloading millions of pages in a 24-hour period.
+
+% As with many downloaders, it is possible to exceed polite limits of server usage with an internet connection of even modest throughput.
 % The original uses for the tool required sampling once or twice per server, meaning this was not a significant problem, however, those wishing to download websites will find themselves dealing with significant ethical concerns.
 
-\section{Applications}
-
-Corpora built using this strategy offer insights into the properties of language as it is used and maintained on a daily basis, yielding particular value to epistemic problems regarding web sampling:
-
-\begin{itemize}
-    \item The proportions and areas of web pages that typically change as boilerplate and templating systems;
-    \item The impact of social feedback and user generated content on page content;
-    \item How censorship, redaction and revision affect website contents;
-    \item Website resource persistence relative to content (link rot/document attrition).
-\end{itemize}
+\section{Conclusion}
+The \toolname~sampling tool, available online\footnote{\url{http://stephenwattam.com/projects/LWAC}}, offers an easy and rigorous way to compile longitudinal web corpora from arbitrary URI lists.  We believe it has particular utility to investigation of challenges that face WaC methods, as well as fine-grained sampling of language linked to current events and other fast-moving phenomena.
 
 
 
