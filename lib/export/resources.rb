@@ -1,17 +1,21 @@
 
+# -----------------------------------------------------------------------------
 # Provide a nice truncated output for summaries
 class String
-  def truncate(lim, ellipsis = "...", pad = " ")
-    raise "Cannot truncate to negative or zero length." if ellipsis.length >= lim
-
-    ellipsis = "" if self.length < lim
-    return (self + pad*((lim-ellipsis.length).to_f / pad.length).ceil)[0..(lim-ellipsis.length)] + ellipsis
+  def truncate(lim, ellipsis='...', pad=' ')
+    ellipsis = '' if self.length <= lim
+    return ellipsis[ellipsis.length - lim..-1] if lim <= ellipsis.length
+    return self[0..(lim - ellipsis.length)-1] + ellipsis + (pad * [lim - self.length, 0].max)
   end
 end
 
-TRUNCATE_LENGTH = 15
-
+# -----------------------------------------------------------------------------
+# This is similar to ruby's Struct system, in that it creates an object based on
+# the input parameters, with the exception that it can be efficiently and
+# recursively described.
 class Resource
+
+  # Construct a resource from a hash of parameters and a name.
   def initialize(name, params = {})
     @params = []
     params.each{ |p, v|
@@ -29,6 +33,10 @@ class Resource
     @name     = name
   end
 
+  # Describe this resource in a nice terminal-friendly way
+  #  * trunc --- how to truncate the keys[0] and values[1]
+  #  * indent --- base indent
+  #  * notitle --- Don't output a header
   def describe(trunc = [17, 50], indent=0, notitle=false)
     str = "{\n"
     str = "#{" "*indent}#{@name}#{str}" if not notitle
@@ -49,28 +57,9 @@ class Resource
     return str
   end
 
-
-  #def method_missing(m, *args)
-    ## Convert to a string
-    #m = m.to_s
-
-    #if m =~ /(.*)=$/ then
-      ## Assignment statement
-      #param = $1
-      #raise ArgumentError.new("wrong number of arguments(#{args.length} for 1)")     if not args.length == 1
-      #raise NoMethodError.new("undefined method `#{m}' for #{self}:#{self.class}")   if not @params.include?(param)        
-
-      #return eval("@#{param} = args[0]")
-    #end
-
-    ## Simple return statement
-    #raise NoMethodError.new("undefined method `#{m}' for #{self}:#{self.class}")     if not @params.include?(m)
-    #return eval("@#{m}")
-  #end
-
-
-
 private
+
+  # Store a clean internal parameter name
   def sanitise_paramname(p)
     p.to_s.gsub(/[\s]/, "_").gsub(/[^a-zA-Z0-9_]/, "_")
   end

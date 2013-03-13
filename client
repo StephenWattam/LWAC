@@ -6,12 +6,8 @@ if __FILE__ != $0 then
 end
 require './lib/shared/launch_tools.rb'
 
-# Check for curl 
-if not gem_available?('curb') then
-  $stderr.puts "You must install the ruby CURL gem (curb) to proceed."
-  $stderr.puts "gem install -r curb"
-  exit(1)
-end
+check_gems('marilyn-rpc', 'curb', 'eventmachine')
+
 Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
 Dir.glob(File.join(File.dirname(__FILE__), "lib", "client", "*.rb")).each{|x| require x}
 
@@ -198,7 +194,7 @@ end
 # -----------------------------------------------------------------------------
   
 
-config = verify_and_launch
+config = load_config 
 
 
 

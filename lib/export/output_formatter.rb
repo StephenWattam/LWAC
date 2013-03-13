@@ -1,6 +1,34 @@
+# 
+# The output formatting system for the export tool uses these procedures.
+#
+# They are responsible for:
+#  * Constructing lambda-function filters for data selection
+#  * Constructing lambda-function output formatter scripts
+#  * Running filters on data
+#  * Producing output strings from formatters and data
+#
 
 
 
+
+# -----------------------------------------------------------------------------
+# Loads filters from the config file, in the following format:
+#  {:level => {:filter_name => "expression", :name => "expr", :name => "expr"},
+#   :level => {...}
+#  }
+#
+# Where :level describes one of the filtering levels supported by the export
+# script:
+#  :server --- All data from a server's download process (mainly summary stats)
+#  :sample --- Data for a given sample (cross-sect)
+#  :datapoint --- Data for a given link
+#
+# Filter names are arbitrary identifiers for your referernce.
+#
+# Expressions can refer to any properties of the resource they use, or any
+# resources from higher levels, for example, sample levels can refer to sample.id,
+# but not datapoint.id.
+#
 def compile_filters( filters )
   filters.each{|level, fs|
     $log.info "Compiling #{level}-level filters..."
@@ -32,6 +60,11 @@ def compile_filters( filters )
   }
 end
 
+
+
+
+
+# -----------------------------------------------------------------------------
 # Runs filters for a given level
 def filter( data, filters )
   return true if not filters # Accept if no constraints given
@@ -57,7 +90,29 @@ rescue Exception => e
   exit(1)
 end
 
+
+
+
+# -----------------------------------------------------------------------------
 # Compile formatting procedures
+#
+# Output format procedures are designed to handle output of missing values,
+# formatting such as lower-case or normalised output.
+#
+# The format is described in a hash, as in the config file:
+#  { :key_name => "variable.name", -and/or-
+#    :key_name => {:var => 'variable.name', :condition => 'expression', :missing => 'NA'},
+#    :key_name => {:expr => 'expression returning value'},
+#    ...
+# }
+# 
+# Where 'key_name' is used to form the name of a column in the CSV, and the value can be
+# either a hash or a string.  Where a string is given, it is presumed to be the name
+# of a resource value, i.e. sample.id, or sample.datapoint.id.  Where a hash is given,
+# it can contain either
+#  1) :var, :condition and :missing fields to describe how to get and format data simply
+#  2) :expr, an expression that returns a value and may do more complex formatting
+#
 def compile_format_procedures( format )
   $log.info "Compiling formatting procedures..."
 
@@ -98,6 +153,9 @@ def compile_format_procedures( format )
 end
 
 
+
+
+# -----------------------------------------------------------------------------
 # Format data from the 'data' resource according to a set of rules
 # given in the format hash.
 #
@@ -151,7 +209,8 @@ end
 
 
 
-
+# -----------------------------------------------------------------------------
+# Describe progress through the sample
 def announce(count, progress, estimated_lines, period)
   return progress if(count % period) != 0
 

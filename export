@@ -15,7 +15,7 @@ if __FILE__ != $0 then
   exit(1)
 end
 require './lib/shared/launch_tools.rb'
-config = verify_and_launch
+config = load_config 
 
 # Attempt to load server config
 config[:server_config] = File.join( config[:server_config] )

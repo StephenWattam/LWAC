@@ -1,8 +1,17 @@
 #!/usr/bin/env ruby
+
+if __FILE__ != $0 then
+  $stderr.puts "This script is intended to be run directly."
+  exit(1)
+end
+require './lib/shared/launch_tools.rb'
+
+# Load all libs from shared, storage and server
 Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
 Dir.glob(File.join(File.dirname(__FILE__), "lib", "storage", "*.rb")).each{|x| require x}
 Dir.glob(File.join(File.dirname(__FILE__), "lib", "server", "*.rb")).each{|x| require x}
 
+# Load marilyn, eventmachine gems
 require 'marilyn-rpc'
 require 'eventmachine'
 
@@ -246,12 +255,8 @@ end
 
 
 # -----------------------------------------------------------------------------
-if __FILE__ != $0 then
-  $stderr.puts "This script is intended to be run directly."
-  exit(1)
-end
-require './lib/shared/launch_tools.rb'
-config = verify_and_launch
+check_gems('marilyn-rpc', 'eventmachine')
+config = load_config 
 
 
 # Fire up the server

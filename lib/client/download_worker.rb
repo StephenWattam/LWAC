@@ -15,7 +15,8 @@ class Worker
     # Set up curl
     @c = Curl::Easy.new
     @c.unrestricted_auth = true
-    # TODO: test this as an assumption: is knowing ssl important?
+
+    # TODO: make this configurable (it already is, but still...)
     @c.ssl_verify_peer = false
     @c.ssl_verify_host = false
     config.each{|k, v|

@@ -1,3 +1,14 @@
+# -----------------------------------------------------------------------------
+# These procedures are designed as helpers for launching the various utilities
+# in LWAC.  They cover:
+#  * Loading configs
+#  * Checking dependencies at runtime for helpful error output
+#  * Instantiating global log objects
+
+
+
+# -----------------------------------------------------------------------------
+# Test if a gem is available, without throwing an exception
 def gem_available?(name)
    Gem::Specification.find_by_name(name)
 rescue Gem::LoadError
@@ -7,7 +18,24 @@ rescue
 end
 
 
-def verify_and_launch
+# -----------------------------------------------------------------------------
+# Check gems exist and load them if possible.
+def check_gems(*gems)
+  gems.each{|g|
+    if not gem_available?(g) then
+      $stderr.puts "Missing gem: #{g}"
+      exit(1)
+    else
+      gem g
+    end
+  }
+end
+
+
+
+# -----------------------------------------------------------------------------
+# Load configs from ARGV[0] and output usage info.
+def load_config 
 
   # First, check arguments are fine.
   if ARGV.length == 0 or not File.readable?(ARGV[0]) then
@@ -16,16 +44,7 @@ def verify_and_launch
   end
 
 
-
-
-  # Then, check gems
-  if not gem_available?('marilyn-rpc') then
-    $stderr.puts "You must install Marilyn RPC gem to proceed."
-    $stderr.puts "gem install -r marilyn-rpc"
-    exit(1)
-  end
-
-  # Requirt things we need for the below
+  # Require things we need for the below
   require 'yaml'
   require 'logger'
 
@@ -33,8 +52,6 @@ def verify_and_launch
 
   # Then check filesystem is in shape
   #require_relative ...
-
-
 
 
   # Then load the config
@@ -59,7 +76,7 @@ def verify_and_launch
   
   
   # Handle signals nicely.
-  $log.debug "Installing signal handlers."
+  $log.debug "Installing signal handlers..."
   %w{INT HUP KILL ABRT}.each{|s|
     trap(s) { raise SignalException.new(s) }
   }
