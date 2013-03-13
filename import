@@ -30,7 +30,7 @@ SCHEMA_PATH     = File.join(File.dirname(__FILE__), "resources", "schema.sql")
 # -----------------------------------------------------------------------------------------------------
 if(ARGV.length < 2)
   puts "USAGE: "
-  puts "  ruby #{__FILE__} DBFILE LINKFILE [create]"
+  puts "  #{$0} DBFILE LINKFILE [create]"
   puts ""
   puts "    DBFILE : A sqlite3 database file to use as metadata storage."
   puts "   LINKFILE: The file to load one-link-per-line from.."

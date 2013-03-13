@@ -1,45 +1,44 @@
 ---
-:storage:
-  :root: corpus
-  :state_file: state.yml
-  :sample_subdir: samples
-  :sample_filename: sample.yml
-  :files_per_dir: 1000
-  :database:
-    :filename: links.db
-    :table: links
-    :transaction_limit: 100
-    :pragma:
-      "locking_mode": "EXCLUSIVE"
-      "cache_size": 20000
-      "synchronous": 0
-      "temp_store": 2
-    :fields:
-      :id: id
-      :uri: uri
-:sampling_policy:
-  #:sample_time: 86400       # Day long samples
-  :sample_time: 60       # minute long samples(!)
-  :sample_alignment: 0      # "align to midnight" (or 'round' minutes, in the case of minute-long samples)
-:client_management:
-  :time_per_link: 1    # Allow 1 seconds per link before timing out and resetting the client's assignments
-  :empty_client_backoff: 60 # If we find no links free, tell the client to wait for this time before trying again
-  :delay_overestimate: 10       # Tell the client to wait for n seconds after the sample is open
-:server:
-  :interfaces:
-    - 
-      :interface: localhost       # The interface to listen on
+:storage:                       # Options affecting the data storage engine
+  :root: corpus                   # A path to the corpus directory  (root/)
+  :state_file: state.yml          # What to call the file where server state is stored  (root/state_file)
+  :sample_subdir: samples         # Where to keep samples (root/sample_subdir)
+  :sample_filename: sample.yml    # What to call each file (root/sample_subdir/id/sample.yml
+  :files_per_dir: 1000            # How many files to store in each directory (root/sample_subdir/id/XX/)
+  :database:                      # Config options affecting the metadata database
+    :filename: links.db             # Name of the database, relative to corpus root (root/filename)
+    :table: links                   # The name of the links table within the sqlite db
+    :transaction_limit: 100         # How many requests per transaction.  Larger numbers yield a speed boost at the expense of data security and memory use.
+    :pragma:                        # Custom pragmas.  See SQLite's docs.  Default settings yield speed and fair data security
+      "locking_mode": "EXCLUSIVE"     # Do not allow others to access the db when the server is running
+      "cache_size": 20000             # Allow a large cache
+      "synchronous": 0                # Asynchronous operations speed things up a lot
+      "temp_store": 2                 # Use temp storage
+    :fields:                        # Fields for the link table:
+      :id: id                         # The ID field is called 'id' by default  
+      :uri: uri                       # The field with the URIs in it is called 'uri' by default
+:sampling_policy:               # Defines sampling times
+  :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
+  :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
+:client_management:             # Management of downloader clients
+  :time_per_link: 1               # Allow n second[s] per link before timing out and resetting the client's assignments.  Make this very low.  Normally 1 is acceptable.
+  :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
+  :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
+:server:                        # Network server properties
+  :interfaces:                    # Listen on the following list of interfaces...
+    -                             
+      :interface: localhost         # The interface to listen on
       :port: 27400                  # The port to listen on
     - 
       :interface: 148.88.227.135    
-      :port: 27400                  # The port to listen on
-  :service_name: :downloader    # The service name exposed over marilyn
-:logging:
-  :progname: Server
-  :logs:
-    :default:
-      :dev: STDOUT                                                # STDOUT, STDERR or a filename are supported
-      :level: :info                                              # level to debug at
+      :port: 27400                  
+  :service_name: :downloader      # The service name exposed over marilyn (for now, ALWAYS leave as :downloader)
+:logging:                       # Logging and output options
+  :progname: Server               # What to call the app in logs
+  :logs:                          # A list of log outputs
+    :default:                       # Call this log "default"
+      :dev: STDOUT                  # Where to log.  Give a filename, or use 'STDOUT' or 'STDERR'
+      :level: :info                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

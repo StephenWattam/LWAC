@@ -41,7 +41,6 @@ class Worker
   # Closes the connection to the server
   def close
     @abort = true
-    #puts "STUB: closing worker #{@id}"
   end
 end
 

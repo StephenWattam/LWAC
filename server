@@ -5,6 +5,7 @@ if __FILE__ != $0 then
   exit(1)
 end
 require './lib/shared/launch_tools.rb'
+check_gems('marilyn-rpc', 'eventmachine')
 
 # Load all libs from shared, storage and server
 Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
@@ -255,7 +256,6 @@ end
 
 
 # -----------------------------------------------------------------------------
-check_gems('marilyn-rpc', 'eventmachine')
 config = load_config 
 
 

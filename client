@@ -58,7 +58,7 @@ class DownloadClient
   rescue SignalException => se
     $log.fatal "Caught signal!"
     @shutdown = true
-    $log.fatal "Will contact the server to cancel links..."
+    $log.fatal "Contacting the server to cancel links..."
     cancel_batch
     $log.fatal "Done."
     return
@@ -93,8 +93,8 @@ private
     raise se
   end
 
+  # Grab a batch of links from the server
   def acquire_batch
-
     loop do
       @links = connect do |s|
         s.check_out(@uuid, @config[:client][:batch_capacity])
@@ -113,6 +113,8 @@ private
     end
   end
 
+  # Send the batch of datapoints we have currently.
+  # Sends in "chunks" of :check_in_rate 
   def send_batch
     while(@datapoints.length > 0) do
       @pending    = @datapoints.slice!(0, @config[:client][:check_in_rate])
@@ -124,6 +126,8 @@ private
     end
   end
 
+  # Cancel the batch of links we currently have checked out.
+  # This atomically aborts these links and frees them up for other clients.
   def cancel_batch
     return if(@links.class == Fixnum) # just in case we bail whilst waiting
 
@@ -133,30 +137,40 @@ private
     end
   end
 
-  # Connect to the server
+  # Connect to the server, using backoff as described in the config file
   def connect(&block)
     $log.debug "Connecting to server #{@config[:server][:address]}:#{@config[:server][:port]}..."
+
     client = nil
     while(not client) do
       begin
+        # Attempt to connect with the connect_timeout set
         Timeout::timeout(@config[:network][:connect_timeout]){
           client = MarilynRPC::NativeClient.connect_tcp( @config[:server][:address], @config[:server][:port] )
         }
+
+      # On error
       rescue Exception => e
+        
+        # Simply quit if we have been told to shut down
         return if @shutdown
-        # In case of network error
+
+        # Network Errors
         case e
         when Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
-          # Increase up to the limit set in the config file
+          # Increase reconnect timer gradually up to the limit set in the config file
           @reconnect_timer = [@reconnect_timer + @config[:network][:connect_failure_penalty], @config[:network][:maximum_reconnect_time]].min
         else
           # Continue to pass error up
           raise e
         end
+
+        # Warn the user and wait until it's time to try again
         $log.error "Failed to connect (#{e}).  Reconnecting in #{@reconnect_timer}s."
         sleep(@reconnect_timer)
       end
     end
+
     # Reset the backoff timer now we have connected successfully
     @reconnect_timer = @config[:network][:minimum_reconnect_time]
 
@@ -164,6 +178,7 @@ private
     download_service = client.for(:downloader)
     $log.debug "Done.  Yielding to perform actions."
 
+    # Then yield the service to our caller
     response = nil
     begin
       response = yield(download_service)
@@ -172,6 +187,7 @@ private
       $log.debug e.backtrace.join("\n")
     end
     
+    # When done, disconnect
     client.disconnect
     $log.debug "Disconnected."
 
@@ -193,25 +209,13 @@ end
 
 # -----------------------------------------------------------------------------
   
-
+# Load config and logs using launch_tools
 config = load_config 
-
-
-
 
 # Start the client going
 dc = DownloadClient.new(config)
+
+# download
 dc.work
-$log.close
-
-
-
-
-
-
-
-
-
-
 
 

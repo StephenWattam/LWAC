@@ -1,35 +1,35 @@
 ---
-:server_config: config/server.yml
-:output:
-  :announce: 2000                   # Every nth line, update the UI
-  :filename: export.csv
-  :headers: true
-  :level: :datapoint                # output one line per :server, :sample or :datapoint
-                                    # note that if you select :server, all the
-                                    # sample and datapoint vars will be nil
-
-  :filters:
-#    :sample:
+:server_config: config/server.yml     # Export reads the storage config from a server.  Point this at the server config.
+:output:                              # Output config, which is pretty much everything
+  :announce: 2000                       # Every nth line, update the UI
+  :filename: export.csv                 # Write to this file
+  :headers: true                        # Output CSV headers?
+  :level: :datapoint                    # output one line per :server, :sample or :datapoint
+                                        #   note that if you select :server, all the
+                                        #   sample and datapoint vars will be nil
+  :filters:                             # Filters define the selection of data to output
+    :server:                              # server level filters
+    :sample:                              # sample level filters
 #      #:test_filter: data.sample.id > 1 and data.sample.id < 3
 #      :test_filter2: data.sample.id == 1
-#    :datapoint:
+    :datapoint:                           # datapoint level filters
 #      :test_filter3: data.datapoint.id > 10
-  :format:
-    :sample_id: sample.id
-    :link_id: datapoint.id
+  :format:                              # Formatters define how data is output to CSV, once selected.
+    :sample_id: sample.id               # Make the 'sample_id' field contain the sample.id variable.
+    :link_id: datapoint.id              # link_id will contain the datapoint.id variable, etc...
     :link_uri: datapoint.uri
-    :redirected:
+    :redirected:                        # 'redirected' field will include the output of the expression below
       :expr: "return (data.datapoint.response.effective_uri and data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/'))"
-    :dns_time: datapoint.response.dns_lookup_time
-    :redirect_time: 
+    :dns_time: datapoint.response.dns_lookup_time 
+    :redirect_time:                     # 'redirect_time' will contain the variable datapoint.response.redirect_time only if condition evaluates to true, and "" otherwise
       :var: datapoint.response.redirect_time
       :condition: "(x and x.to_f > 0)"
       :missing: ""
-    :rtt: datapoint.response.round_trip_time
+    :rtt: datapoint.response.round_trip_time  
     :response_code: datapoint.response.code
     :imperfect: 
       :expr: "data.datapoint.response.code.to_i == 200"
-    :redirect_proportion:
+    :redirect_proportion:               # A long expression on multiple lines
       :expr: >
         r = data.datapoint.response
 
@@ -39,12 +39,12 @@
             return "NA"
         end
     #:l2: datapoint.id
-:logging:
-  :progname: Export 
-  :logs:
-    :default:
-      :dev: STDOUT                                                # STDOUT, STDERR or a filename are supported
-      :level: :info                                                # level to debug at
+:logging:                             # Log output settings
+  :progname: Export                     # Name of the app in the logs
+  :logs:                                # List of logs
+    :default:                             # Log name 'default'
+      :dev: STDOUT                          # File to log to, or 'STDOUT', or 'STDERR'
+      :level: :info                         # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

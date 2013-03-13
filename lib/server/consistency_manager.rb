@@ -160,7 +160,7 @@ private
 
     # Then jump forward until the next point in the future
     while(time < Time.now)
-      time += (@config[:sample_time])#(86400) # days
+      time += (@config[:sample_time])
     end
     return time.to_i
   end
@@ -199,15 +199,10 @@ private
   end
 end
 
-
+# Test script.
 if(__FILE__ == $0) then
-
   $log = MultiOutputLogger.new($stdout)
   $log.set_level(:debug)
-
   config = YAML.load_file("./config/server.yml")
-
   cm = ConsistencyManager.new(config)
-
-
 end
