@@ -43,7 +43,7 @@ class ConsistencyManager
       if(wait < 0)
         $log.info "Sample is closed but ready to open."
       else
-        $log.info "Sample closed: wait #{wait}s before sampling until #{Time.now.to_i + wait}."
+        $log.info "Sample closed: wait #{wait}s before sampling until #{Time.now + wait}."
       end
     end
 

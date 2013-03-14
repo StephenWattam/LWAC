@@ -24,8 +24,9 @@ FIX_ENCODING = true
 # output progress every n links
 NOTIFY_PROGRESS = 1023
 
-
-SCHEMA_PATH     = File.join(File.dirname(__FILE__), "resources", "schema.sql")
+# Where is the schema to be found?
+SCHEMA_PATH  = File.join(File.dirname(__FILE__), "resources", "schemata")
+SCHEMATA     = Dir.glob(File.join(SCHEMA_PATH, "*.sql"))
 
 # -----------------------------------------------------------------------------------------------------
 if(ARGV.length < 2)
@@ -46,8 +47,12 @@ require 'sqlite3'
 if create then
   puts "Creating db at #{db_file} using schema from #{SCHEMA_PATH}..."
   SQLite3::Database.new(db_file) do |db|
-    schema = File.open(SCHEMA_PATH).read
-    db.execute(schema)
+
+    SCHEMATA.each{|s|
+      puts "Schema: #{s}"
+      schema = File.read(s)
+      db.execute(schema)
+    }
   end
   puts "Done!"
 end
@@ -144,7 +149,6 @@ class DatabaseConnection
 
     return res
   end
-  
 private
   def escape( str )
     "'#{SQLite3::Database::quote(str.to_s)}'"
