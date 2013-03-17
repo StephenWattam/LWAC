@@ -1,5 +1,18 @@
-LWAC
-====
+LWAC User Guide
+===============
+Welcome to the LWAC user guide.  The purpose of this document is to explain some of the design concepts used and provide recipes for completing common tasks.
+
+Concepts
+--------
+The [concepts](concepts.html) used in the model are explained here.
+
+Tools
+-----
+LWAC consists of a number of [tools](tools.html), and these are explained individually here.
+
+Workflows
+---------
+LWAC's [workflow](workflow.html) was designed around longitudinal sampling.  Some common methods are explained here.
 
 
 
