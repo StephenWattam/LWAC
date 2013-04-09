@@ -61,5 +61,7 @@ The corpus includes:
 
 
 ### File Formats
-Each of the files within a corpus, with the exception of the metadata database, is a serialised ruby object, as defined in `/lib/shared/data_types.rb`.
+Each of the files within a corpus, with the exception of the metadata database, is a YAML-serialised ruby object, as defined in `/lib/shared/data_types.rb`.
+
+
 
