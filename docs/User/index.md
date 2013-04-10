@@ -12,7 +12,7 @@ LWAC consists of a number of [tools](tools.html), and these are explained indivi
 
 Workflows
 ---------
-LWAC's [workflow](workflow.html) was designed around longitudinal sampling.  Some common methods are explained here.
+LWAC's [workflow](workflows.html) was designed around longitudinal sampling.  Some common methods are explained here.
 
 
 
