@@ -1,6 +1,6 @@
 Tools
 =====
-LWAC's workflow is based around a simple import-augment-export system, and as such there are three major tools in the distribution:
+LWAC's workflow is based around a simple import-download-export system, and as such there are three major tools in the distribution:
 
 Import
 ------
@@ -51,8 +51,47 @@ and thus is configured with network access properties for both the server and ex
 
 Each server supports an unlimited number of clients, however, their access to the corpus is regulated through a competition model---whilst one is connected, the others are told to wait.  
 
+### Server
+
+#### Usage
+To run the server, simply provide it with a path to a config file:
+
+    ./server config/server.yml
+
+
+#### Configuration
+The server requires the following as a prerequisite:
+
+ * A metadata database must be created using the import tool
+ * This database must be placed within a directory to which the server has write access.  This will form the root of the corpus
+
+For more detailed configuration options, see the detailed writeup on the [server configuration page](server_config.html).
+
+
+### Client
+
+#### Usage
+To run the client, simply provide it with a path to a relevant config file:
+
+    ./client config/client.yml
+
+#### Configuration
+The client is also managed exclusively by its config file.  See more detail on the [client configuration page](client_config.html).
 
 
 
 Export
 ------
+The export tool is used to reformat information from the metadata and backing store into CSV files for simple processing with tools such as R.  It is heavily based on a "filter and transform" model, where small code snippets are used to select and then present data in a useful form.  This approach has a number of advantages, making it simple to do simple tasks without limiting the power and complexity of the selection rules.  
+
+### Usage
+To run the export tool, simply provide it with a path pointing to a relevant config file:
+
+    ./export config/export.yml
+
+It's worth noting that the export tool uses the server configuration file for corpus access, and thus will need to be able to access that also.
+
+### Configuration
+The export tool is influenced by both its own config file and that of the server.  Of most interest is the [export configuration page](export_config.html).
+
+

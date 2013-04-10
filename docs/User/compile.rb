@@ -6,14 +6,20 @@
 
 require 'markdown'
 require 'fileutils'
+require 'erb'
 
 output_dir = "./docs"
 MARKDOWN_EXTENSIONS = %w{markdown mdown mkdn md mkd mdwn mdtxt mdtext text} 
-
+TEMPLATE = "template.rhtml"
 
 if File.exist?(output_dir) then
     $stderr.puts "Output directory exists (#{output_dir}) --- please delete and run again."
     exit(1)
+end
+
+
+def template(filename, content)
+  return ERB.new(File.read(TEMPLATE)).result(binding)
 end
 
 # create output dir
@@ -24,7 +30,7 @@ Dir.glob("*"){|f|
     puts "Compiling #{File.basename(f)}..."
 
     File.open(File.join(output_dir, File.basename(f)[0..-(File.extname(f).length + 1)] + ".html"), 'w'){|of|      
-      of.write( Markdown.new(File.read(f)).to_html )
+      of.write( template(f, Markdown.new(File.read(f)).to_html ))
     }
   elsif f != $0 and File.basename(f) != File.basename(output_dir)
     puts "Copying #{f}..."
