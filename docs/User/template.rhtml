@@ -3,58 +3,12 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title><%= filename.to_s[0..-(File.extname(filename).to_s.length + 1)] %></title>
 
-        <script language="javascript" type="text/javascript">
-/*
- * Dynamic Table of Contents script
- * by Matt Whitlock <http://www.whitsoftdev.com/>
- */
-
-function createLink(href, innerHTML) {
-	var a = document.createElement("a");
-	a.setAttribute("href", href);
-	a.innerHTML = innerHTML;
-	return a;
-}
-
-function generateTOC(toc) {
-	var i2 = 0, i3 = 0, i4 = 0;
-	toc = toc.appendChild(document.createElement("ol"));
-	for (var i = 0; i < document.body.childNodes.length; ++i) {
-		var node = document.body.childNodes[i];
-		var tagName = node.nodeName.toLowerCase();
-		if (tagName == "h4") {
-			++i4;
-			if (i4 == 1) toc.lastChild.lastChild.lastChild.appendChild(document.createElement("ol"));
-			var section = i2 + "." + i3 + "." + i4;
-			node.insertBefore(document.createTextNode(section + ". "), node.firstChild);
-			node.id = "section" + section;
-			toc.lastChild.lastChild.lastChild.lastChild.appendChild(document.createElement("li")).appendChild(createLink("#section" + section, node.innerHTML));
-		}
-		else if (tagName == "h3") {
-			++i3, i4 = 0;
-			if (i3 == 1) toc.lastChild.appendChild(document.createElement("ol"));
-			var section = i2 + "." + i3;
-			node.insertBefore(document.createTextNode(section + ". "), node.firstChild);
-			node.id = "section" + section;
-			toc.lastChild.lastChild.appendChild(document.createElement("li")).appendChild(createLink("#section" + section, node.innerHTML));
-		}
-		else if (tagName == "h2") {
-			++i2, i3 = 0, i4 = 0;
-			var section = i2;
-			node.insertBefore(document.createTextNode(section + ". "), node.firstChild);
-			node.id = "section" + section;
-			toc.appendChild(h2item = document.createElement("li")).appendChild(createLink("#section" + section, node.innerHTML));
-		}
-	}
-}
-        </script>
-
         <style type="text/css">
             body {
 	font-family: "Avenir Next", Helvetica, Arial, sans-serif;
 	padding:1em;
 	margin:auto;
-	max-width:42em;
+//	max-width:42em;
 	background:#fefefe;
 }
 
@@ -160,10 +114,19 @@ pre > code {
 .send { color:#77bb77; }
 .server { color:#7799bb; }
 .error { color:#AA0000; }
+
+.bold{
+    font-weight: bold;
+}
+
 </style>
     </head>
     <body onload="generateTOC(document.getElementById('toc'));">
-        <div id="toc"></div>
+        <div id="nav">
+            <div id="menu" style="margin: 0 auto; font-size: smaller; background-color: #ddd; text-align: center; padding: 0.2em 0.4em;">
+                <%= pages.sort.map{|p| "<a href=\"#{p}.html\" " + ((p == filename.to_s[0..-(File.extname(filename).to_s.length + 1)]) ? 'style="color: black;"' : '') + ">#{p}</a>"}.join("&nbsp;|&nbsp;") %>
+            </div>
+        </div>
         <%=content%> 
     </body>
 </html>
