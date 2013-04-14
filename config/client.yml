@@ -19,7 +19,7 @@
   :logs:                                    # List of log outputs
     :default:                                 # Log is called "default"
       :dev: STDOUT                              # Filename to log to, or "STDOUT", or "STDERR"
-      :level: :info                             # Level to report at.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :debug                             # Level to report at.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/client.err'
       #:level: :warn                                              

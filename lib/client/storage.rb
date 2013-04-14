@@ -1,4 +1,5 @@
 # Storage/cache library for clients
+# This is a simple key-value store either on disk or in memory, designed for storing datapoints before they're shipped off to the server
 
 require 'pstore'
 

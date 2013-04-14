@@ -45,8 +45,8 @@ If you wish to edit the sample computation algorithm, it resides in `lib/server/
 Client Policy
 -------------
 This section describes the properties each client must inherit from its server.  It describes things such as how the client appears to external websites, and how it normalises and packages its data before upload to the server.
-
- * `body_not_text_placeholder` --- Return values that are not text (images, etc) may be replaced with this placeholder.
+ 
+ * `max_body_size` --- Stop downloading when this number of bytes have been downloaded.  Used to prevent aberrantly large files from filling RAM or disk storage.
  * `fix_encoding` --- Boolean. Should the encoding be normalised to `target_encoding`?
  * `target_encoding` --- The name of an encoding to normalise to.  Default is 'UTF-8', but anything supported by Ruby's String#encode method will work
  * `encoding_options` --- Options hash passed to String#encode, may include:
@@ -68,6 +68,14 @@ Clients use cURL to download links, using the `curb` library, and may thus be co
    * `timeout` --- Overall timeout, in seconds, for the whole request.
    * `connect_timeout` --- TCP connect timeout
    * `dns_cache_timeout` --- DNS lookup timeout
+
+MIME type handling can be controlled in a rudimentary manner to prevent superfluous saving of binary data.  This is controlled using the `Content-type` field of the response headers, and takes the form of a whitelist or blacklist based on regular expressions.  Any link that is 'denied' has its body content wiped and a flag set in its datapoint metadata, but otherwise remains intact. It is configured by the structure called `:mimes`.
+
+ * `mimes{}` --- Defines mime-type acceptance handling
+   * `policy` --- Either `:whitelist` to only accept the items matching the list, or `:blacklist` to only decline the items on the list.
+   * `ignore_case` --- Should the regexp matching be case-insensitive?
+   * `list[]` --- A list of regular expressions.  If one matches, depending on white/blacklist configuration, the body will be blanked.
+
 
 Client Management
 -----------------

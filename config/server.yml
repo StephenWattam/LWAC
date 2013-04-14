@@ -21,7 +21,6 @@
   :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:
-  :body_not_text_placeholder: "<not text>"  # What to say if we get binary responses from the server.  Should be detectable in post-processing.
     # ----
   :fix_encoding: true                       # Attempt to fix the encoding of output?
   :target_encoding: UTF-8                   # Target encoding
@@ -37,6 +36,13 @@
     #:crlf_newline:                           # Replaces LF(\n) with CRLF(\r\n) if true
     :universal_newline: true                  # Replaces CRLF(\r\n) and CR(\r) with LF(\n) if true
     # ----
+  :max_body_size:  20971520                # Stop downloading if over this number of bytes is downloaded, by default set to 20MB, 20971520
+  :mimes:
+    :policy: whitelist    # :whitelist to allow only those in list, :blacklist to deny only those in list
+    :ignore_case: true
+    :list:                 # List of mime types to allow/deny
+      - ^text\/?.*$       # text-only mimes
+      - ^.+$              # anything with a valid content-type
   :curl_workers:                          # Options affecting individual web request clients themselves
     :max_redirects: 5                       # How many redirects to follow.  5 seems standard in browsers
     :useragent: ! '"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.2.11) Gecko/20101012 Firefox/3.6.11"'  # How to ID ones'self to the server
