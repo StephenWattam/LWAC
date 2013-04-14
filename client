@@ -24,12 +24,15 @@ class DownloadClient
 
     # Generate a UUID and ensure the workers know it
     generate_uuid
-    @config[:worker_pool][:client_uuid] = @uuid
 
-    # Reset the reconnection timer to the minimum wait
-    @reconnect_timer = @config[:network][:minimum_reconnect_time]
+    # Reset the reconnection timer to minimum delay, then
+    # compute the time before which we must not retry
+    reset_reconnection_timer
+    compute_reconnection_time
 
-    # Current working links
+
+    # Current working links and download policy
+    @policy       = {}
     @links        = []
     @datapoints   = []
 
@@ -72,7 +75,7 @@ private
   # This starts up a worker pool, and waits until they are done.
   def process_links
     $log.info "Creating worker pool and starting work..."
-    pool = WorkerPool.new(@config[:worker_pool], @links)
+    pool = WorkerPool.new(@config[:client][:simultaneous_workers], @policy, @uuid, @links)
     pool.init_workers
     pool.work
     @datapoints = pool.wait_and_get_datapoints
@@ -96,19 +99,21 @@ private
   # Grab a batch of links from the server
   def acquire_batch
     loop do
-      @links = connect do |s|
+      ret = connect do |s|
         s.check_out(@uuid, @config[:client][:batch_capacity])
       end
 
       # If the server tells us to back off, so do.
-      if(@links.class == Fixnum)
-        $log.info "Sleeping for #{@links}s until #{Time.now + @links} at the server's request."
-        sleep([@links, @config[:network][:maximum_reconnect_time]].min)
-      elsif(@links.class == Array)
+      if(ret.class == Fixnum)
+        $log.info "Waiting for #{ret}s until #{Time.now + ret} at the server's request."
+        sleep([ret, @config[:network][:maximum_reconnect_time]].min)
+      elsif(ret.class == Array)
+        @policy, @links = ret
         $log.info "Received #{@links.length}/#{@config[:client][:batch_capacity]} links from server."
         return
       else
         $log.warn "Received unrecognised return from server of type: #{@links.class}.  Retrying..."
+        increment_reconnection_timer
       end
     end
   end
@@ -131,6 +136,11 @@ private
   def cancel_batch
     return if(@links.class == Fixnum) # just in case we bail whilst waiting
 
+    if @links.empty?
+      $log.info "No links to cancel." 
+      return
+    end
+
     $log.info "Cancelling at least #{@links.length} links."
     connect do |s|
       s.cancel(@uuid)
@@ -144,6 +154,14 @@ private
     client = nil
     while(not client) do
       begin
+
+        # Check reconnect timer and delay if it tells us to
+        if @rc_time > Time.now.to_i then
+          $log.info "Rate limiting self for #{@rc_time - Time.now.to_i}s until #{Time.at(@rc_time)}..."
+          sleep(@rc_time - Time.now.to_i)
+        end
+
+
         # Attempt to connect with the connect_timeout set
         Timeout::timeout(@config[:network][:connect_timeout]){
           client = MarilynRPC::NativeClient.connect_tcp( @config[:server][:address], @config[:server][:port] )
@@ -158,21 +176,21 @@ private
         # Network Errors
         case e
         when Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
-          # Increase reconnect timer gradually up to the limit set in the config file
-          @reconnect_timer = [@reconnect_timer + @config[:network][:connect_failure_penalty], @config[:network][:maximum_reconnect_time]].min
+          increment_reconnection_timer
         else
           # Continue to pass error up
           raise e
         end
+        
+        # Compute reconnection time
+        compute_reconnection_time
 
         # Warn the user and wait until it's time to try again
-        $log.error "Failed to connect (#{e}).  Reconnecting in #{@reconnect_timer}s."
-        sleep(@reconnect_timer)
+        $log.error "Failed to connect (#{e})."
       end
     end
 
-    # Reset the backoff timer now we have connected successfully
-    @reconnect_timer = @config[:network][:minimum_reconnect_time]
+    compute_reconnection_time
 
     # Start doing things!  Register as a client
     download_service = client.for(:downloader)
@@ -200,6 +218,23 @@ private
     require 'socket'
     # TODO: make this ID based more on IP address, and/or make it more readable
     @uuid = @config[:client][:uuid_salt] + "_" + Digest::MD5.hexdigest("#{Socket.gethostname}#{@config[:client][:uuid_salt]}").to_s 
+  end
+
+  # Increase reconnect timer gradually up to the limit set in the config file
+  # Called when any call fails
+  def increment_reconnection_timer
+    @reconnect_timer = [@reconnect_timer + @config[:network][:connect_failure_penalty], @config[:network][:maximum_reconnect_time]].min
+  end
+
+  # Reset the reconnection timer
+  def reset_reconnection_timer
+    @reconnect_timer = @config[:network][:minimum_reconnect_time]
+  end
+
+  # Calculate the time we are next allowed to contact the server
+  def compute_reconnection_time 
+    # Reset the backoff timer now we have connected successfully
+    @rc_time    = Time.now.to_i + @reconnect_timer
   end
 
 end

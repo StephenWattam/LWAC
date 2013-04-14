@@ -42,6 +42,32 @@ Note that if a sample takes more than `sample_time` to run, it will overlap and 
 
 If you wish to edit the sample computation algorithm, it resides in `lib/server/consistency_manager.rb`, under the method `compute_next_sample_time`.
 
+Client Policy
+-------------
+This section describes the properties each client must inherit from its server.  It describes things such as how the client appears to external websites, and how it normalises and packages its data before upload to the server.
+
+ * `body_not_text_placeholder` --- Return values that are not text (images, etc) may be replaced with this placeholder.
+ * `fix_encoding` --- Boolean. Should the encoding be normalised to `target_encoding`?
+ * `target_encoding` --- The name of an encoding to normalise to.  Default is 'UTF-8', but anything supported by Ruby's String#encode method will work
+ * `encoding_options` --- Options hash passed to String#encode, may include:
+   * `encoding_options\invalid` --- If value is `:replace` , replaces undefined chars with the `:replace` char
+   * `encoding_options\undef` --- If value is `:replace` , replaces undefined chars with the `:replace` char
+   * `encoding_options\replace` --- The char to use in replacement, defaults to uFFFD for unicode and '?' for other targets
+   * `encoding_options\fallback{}` --- A key-value table of characters to replace
+   * `encoding_options\xml` --- Either `:text` or `:attr`.  If `:text`, replaces things with hex entities, if `:attr`, it also quotes the entities "&amp;quot;"
+   * `encoding_options\cr_newline` --- Boolean. Replaces LF(\n) with CR(\r) if true
+   * `encoding_options\lf_newline` --- Boolean. Replaces LF(\n) with CRLF(\r\n) if true
+   * `encoding_options\universal_newline` --- Boolean.  Replaces CRLF(\r\n) and CR(\r) with LF(\n) if true
+
+Clients use cURL to download links, using the `curb` library, and may thus be configured with custom request parameters and other options.  The options below are applied by setting properties on the cURL object, and as such anything may be provided as a key that is in the [curb documentation](https://rubygems.org/gems/curb), such as 'verbose' or control over SSL.  By default, SSL options are overridden to accept connections without verifying certificates.
+
+ * `curl_workers{}` --- Defines properties of the CURl workers that contact web servers.
+   * `max_redirect` --- How many HTTP redirects should be followed before giving up?
+   * `useragent` --- The user agent to show to the remote server
+   * `follow_location` --- Should the agent follow location headers?
+   * `timeout` --- Overall timeout, in seconds, for the whole request.
+   * `connect_timeout` --- TCP connect timeout
+   * `dns_cache_timeout` --- DNS lookup timeout
 
 Client Management
 -----------------

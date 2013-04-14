@@ -56,10 +56,12 @@ end
 
 # -----------------------------------------------------------------------------------------------------
 class WorkerPool
-  def initialize(config, links)
+  def initialize(size, config, client_id, links)
     @m    = Mutex.new # Data mutex for "producer" status
     @t    = [] #threads
     @w    = [] # workers
+    @size = size.to_i # number of simultaneous workers
+    @client_id = client_id      # Who am I working on behalf of?
 
     # Keep a copy of the config object
     @config = config
@@ -147,9 +149,9 @@ class WorkerPool
    
   # Create and connect the workers to servers 
   def init_workers
-    $log.debug "Creating #{@config[:simultaneous_workers]} worker object[s]."
+    $log.debug "Creating #{@size} worker object[s]."
     @w = []
-    @config[:simultaneous_workers].times{|s|
+    @size.times{|s|
       @w << Worker.new(s, @config[:curl_workers])
     }
     $log.info "#{@w.length} worker[s] created."
@@ -189,7 +191,7 @@ class WorkerPool
 
       # write to datapoint list
       @dpm.synchronize{
-        @dp << DataPoint.new(link, headers, head, body, response_properties, @config[:client_uuid], nil)
+        @dp << DataPoint.new(link, headers, head, body, response_properties, @client_id, nil)
       }
       
       # Update stats counters.
@@ -213,7 +215,7 @@ class WorkerPool
 
       # write to datapoint list
       @dpm.synchronize{ 
-        @dp << DataPoint.new(link, "", "", "", {}, @config[:client_uuid], "#{e}") 
+        @dp << DataPoint.new(link, "", "", "", {}, @client_id, "#{e}") 
       }
 
       # update the counter.

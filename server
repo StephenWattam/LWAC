@@ -75,7 +75,7 @@ class DownloadServer
 
     summary
 
-    return links
+    return [@config[:client_policy], links]
   end
 
   # Returns either a list of link objects or nil to delete them
@@ -150,6 +150,7 @@ private
   def cancel_timeout(client_id)
     if(@dispatched[client_id]) then
       # Alert the user
+      $log.warn "Client #{client_id} hasn't been heard from for a while..."
       $log.warn "Cleaning up link assignments for dead client #{client_id}."
 
       # Uncheck the item from the consistency manager

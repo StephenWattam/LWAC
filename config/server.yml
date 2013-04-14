@@ -1,6 +1,6 @@
 ---
 :storage:                       # Options affecting the data storage engine
-  :root: corpus                   # A path to the corpus directory  (root/)
+  :root: test/corpus                   # A path to the corpus directory  (root/)
   :state_file: state.yml          # What to call the file where server state is stored  (root/state_file)
   :sample_subdir: samples         # Where to keep samples (root/sample_subdir)
   :sample_filename: sample.yml    # What to call each file (root/sample_subdir/id/sample.yml
@@ -20,6 +20,34 @@
 :sampling_policy:               # Defines sampling times
   :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
+:client_policy:
+  :body_not_text_placeholder: "<not text>"  # What to say if we get binary responses from the server.  Should be detectable in post-processing.
+    # ----
+  :fix_encoding: true                       # Attempt to fix the encoding of output?
+  :target_encoding: UTF-8                   # Target encoding
+  :encoding_options:                        # options supported see http://ruby-doc.org/core-1.9.3/String.html#method-i-encode
+    :invalid: :replace                        # If value is :replace , replaces invalid chars with the :replace char.
+    :undef: :replace                          # if value if :replace , replaces undefined chars with the :replace char 
+    #:replace: '?'                            # the char to use in replacement, defaults to uFFFD for unicode and '?' for other targets
+    #:fallback:                               # some object supporting [], to look up [invalid char in source encoding] = valid char in destination encoding  
+      #'from': 'to'
+      #'from2': 'to2'
+    #:xml: :attr                              # either :text or :attr.  If :text, replaces things with hex entities, if :attr, it also quotes the entities "&quot;"
+    #:cr_newline: true                        # Replaces LF(\n) with CR(\r) if true
+    #:crlf_newline:                           # Replaces LF(\n) with CRLF(\r\n) if true
+    :universal_newline: true                  # Replaces CRLF(\r\n) and CR(\r) with LF(\n) if true
+    # ----
+  :curl_workers:                          # Options affecting individual web request clients themselves
+    :max_redirects: 5                       # How many redirects to follow.  5 seems standard in browsers
+    :useragent: ! '"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.2.11) Gecko/20101012 Firefox/3.6.11"'  # How to ID ones'self to the server
+    :enable_cookies: true
+    # :headers: "Header: String"
+    :verbose: false 
+    :follow_location: true                  # Should it follow location headers?
+    :timeout: 60                            # Overall timeout per request.  Set to a user's attention span.
+    :connect_timeout: 10                    # TCP connect timeout.
+    :dns_cache_timeout: 10                  # DNS lookup timeout.
+    :ftp_response_timeout: 10               # FTP response timeout.
 :client_management:             # Management of downloader clients
   :time_per_link: 1               # Allow n second[s] per link before timing out and resetting the client's assignments.  Make this very low.  Normally 1 is acceptable.
   :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
@@ -29,9 +57,9 @@
     -                             
       :interface: localhost         # The interface to listen on
       :port: 27400                  # The port to listen on
-    - 
-      :interface: 148.88.227.135    
-      :port: 27400                  
+    # - 
+    #   :interface: 148.88.227.135    
+    #   :port: 27400                  
   :service_name: :downloader      # The service name exposed over marilyn (for now, ALWAYS leave as :downloader)
 :logging:                       # Logging and output options
   :progname: Server               # What to call the app in logs
