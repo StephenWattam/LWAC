@@ -162,8 +162,8 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
                 :end_time_s           => as.sample_end_time.to_i,
                 :num_pending_links    => as.pending_links.length,
                 :pending_links        => as.pending_links.to_a,
-                :dir                  => nil, # TODO
-                :path                 => nil  # TODO
+                :dir                  => storage.get_sample_filepath(as.id),
+                :path                 => File.join(storage.get_sample_filepath(as.id), server_config[:storage][:sample_filename]) 
                }
       data.sample = Resource.new("sample", sample)
       #puts sample.describe
@@ -188,8 +188,8 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
 
             datapoint = {:id            => dp.link.id     || "",
                          :uri           => dp.link.uri    || "",
-                         :path          => nil, # TODO
-                         :dir           => nil, # TODO
+                         :dir           => File.dirname(storage.get_dp_filepath(link_id, data.sample.id)), 
+                         :path          => storage.get_dp_filepath(link_id, data.sample.id),
                          :client_id     => dp.client_id   || "",
                          :error         => dp.error       || "",
                          :headers       => dp.headers     || {},

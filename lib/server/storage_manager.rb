@@ -222,7 +222,7 @@ class StorageManager
     end
 
     # Create the sample subdir
-    FileUtils.mkdir_p(get_sample_filename()) if not File.exist?(get_sample_filename)
+    FileUtils.mkdir_p(get_sample_filepath()) if not File.exist?(get_sample_filepath)
   end
 
   # Read some links from the database
@@ -240,32 +240,40 @@ class StorageManager
     @db.read_link_ids
   end
 
+  ## Datapoint read/write
   # Write a datapoint to disk
   def write_datapoint(dp, sample = @state.current_sample)
     $log.debug "Writing datapoint #{dp.link.id} (sample #{sample.id}) to disk."
-    dp_path = File.join(get_dp_filepath(dp, sample.id), dp.link.id.to_s + ".meta")
+    dp_path = get_dp_filepath(dp_id, sample.id)
     YAML.dump_file( dp, dp_path)
   end
 
   # Read a datapoint from disk
   def read_datapoint(dp_id, sample = @state.current_sample)
     $log.debug "Reading datapoint #{dp_id} (sample #{sample.id}) from disk."
-    dp_path = File.join(get_dp_filepath(dp_id, sample.id), dp_id.to_s + ".meta")
+    dp_path = get_dp_filepath(dp_id, sample.id)
     YAML.load_file( dp_path )
   end
 
+  ## Datapoint disk lookup
+
+
+  ## Sample read/write
   # Write a finalised sample to disk in its proper location.
   def write_sample(sample = @state.current_sample)
-    sample_path = File.join( get_sample_filename(sample.id), @config[:sample_filename])
+    sample_path = File.join( get_sample_filepath(sample.id), @config[:sample_filename])
     YAML.dump_file( sample, sample_path )
   end
 
   # Read a finalised sample ID from disk.
   # raises Errno::ENOENT if not there
   def read_sample(sample_id = @state.last_sample_id)
-    sample_path = File.join( get_sample_filename(sample_id), @config[:sample_filename])
+    sample_path = File.join( get_sample_filepath(sample_id), @config[:sample_filename])
     YAML.load_file( sample_path )
   end
+
+
+  ## Sample disk lookup
 
   # Ensure a sample has all of its files on disk,
   # and that they are readable
@@ -312,9 +320,8 @@ class StorageManager
     @db.close
   end
 
-private
   # Get a sample filepath, parent of a datapoint filepath
-  def get_sample_filename(sample_id=nil, dir=nil, ensure_exists=false)
+  def get_sample_filepath(sample_id=nil, dir=nil, ensure_exists=false)
     filepath = File.join( @root, @config[:sample_subdir] )
     filepath = File.join( filepath, sample_id.to_s )            if sample_id
     filepath = File.join( filepath, dir.to_s )                  if dir
@@ -335,7 +342,10 @@ private
     dir = (id.to_i/@files_per_dir).floor
 
     # Ensure dir exists
-    filepath = get_sample_filename( sample_id, dir, true)
+    filepath = get_sample_filepath( sample_id, dir, true)
+
+    # Join the datapoint ID
+    return File.join(filepath, "#{id.to_s}.yml")
   end
 
   # Write the server state to disk
@@ -346,6 +356,7 @@ private
 end
 
 
+private
 
 
 # Test script

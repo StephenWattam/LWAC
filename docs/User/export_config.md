@@ -30,13 +30,13 @@ The hierachy is currently as below:
      * `.duration` --- How long did the sample take, in seconds? (`end_time_s` - `start_time_s`)
      * `.num_pending_links` --- How many links are still waiting to be completed?
      * `.pending_links` --- A list of links still waiting to be downloaded.
-     * `.dir` --- nil, TODO
-     * `.path` --- nil, TODO
+     * `.dir` --- The directory for that sample, relative to the current working directory
+     * `.path` --- The filepath of the sample information file, relative to the current working directory
    * `.datapoint` --- Datapoint-level variables
      * `.id` --- The ID of the datapoint/link
      * `.uri` --- The URI requested to acquire the data
-     * `.path` --- nil, TODO
-     * `.dir` --- nil, TODO
+     * `.path` --- The full filepath of the datapoint file, relative to the current working directory
+     * `.dir` --- The directory in which the datapoint resides, relative to the current working directory
      * `.client_id` --- The ID of the client that did the work
      * `.error` --- Any errors reported during download
      * `.headers` --- A hash containing the HTTP headers

@@ -38,6 +38,10 @@
         else
             return "NA"
         end
+    :sample_file: sample.path
+    :sample_dir: sample.dir
+    :datapoint_dir: datapoint.dir
+    :datapoint_path: datapoint.path
     #:l2: datapoint.id
 :logging:                             # Log output settings
   :progname: Export                     # Name of the app in the logs
