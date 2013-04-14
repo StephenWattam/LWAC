@@ -34,7 +34,7 @@ class DownloadClient
     # Current working links and download policy
     @policy       = {}
     @links        = []
-    @datapoints   = []
+    @datapoints   = Store.new(@config[:client][:cache_file], true)
 
     # Should we really care about being able to contact the server?
     @shutdown     = false
@@ -75,12 +75,12 @@ private
   # This starts up a worker pool, and waits until they are done.
   def process_links
     $log.info "Creating worker pool and starting work..."
-    pool = WorkerPool.new(@config[:client][:simultaneous_workers], @policy, @uuid, @links)
+    pool = WorkerPool.new(@config[:client][:simultaneous_workers], @policy, @datapoints, @uuid, @links)
     pool.init_workers
     pool.work
     @datapoints = pool.wait_and_get_datapoints
-    $log.info "Downloaded.  Checking in complete links..."
-    @datapoints.each{|dp| @links.delete(dp.link) }
+    $log.info "Downloaded.  Checking in #{@datapoints.length} completed datapoint[s]..."
+    @datapoints.each_key{|link_id| @links.delete(link_id) }
     pool.summarise
   rescue SignalException => se
     $log.fatal "Caught signal!"
@@ -122,8 +122,20 @@ private
   # Sends in "chunks" of :check_in_rate 
   def send_batch
     while(@datapoints.length > 0) do
-      @pending    = @datapoints.slice!(0, @config[:client][:check_in_rate])
-      $log.info "Sending #{@pending.length} datapoints (~#{(Marshal.dump(@pending).length.to_f / 1024.0 / 1024.0).round(2)}MB) to server..."
+      @pending = []
+
+      # Take them out of the pstore up to a given size limit, then send that chunk
+      pending_size = 0.0
+      while(@datapoints.length > 0 and pending_size < @config[:client][:check_in_size]) do
+        key = @datapoints.keys[0]
+        dp = @datapoints[key]
+        pending_size += (Marshal.dump(dp).length.to_f / 1024.0 / 1024.0)
+        @pending << @datapoints[key]
+        @datapoints.delete(key)
+      end
+
+      # send datapoints
+      $log.info "Sending #{@pending.length} datapoints (~#{pending_size.round(2)}MB) to server..."
       connect do |s|
         s.check_in(@uuid, @pending)
       end

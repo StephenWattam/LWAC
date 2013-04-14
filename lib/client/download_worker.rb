@@ -3,7 +3,7 @@ require 'thread'
 require 'curl'
 # Load the library for producing UUIDs
 require 'digest/md5'
-
+require File.join(File.dirname(__FILE__), "storage.rb")
 
 
 
@@ -56,7 +56,7 @@ end
 
 # -----------------------------------------------------------------------------------------------------
 class WorkerPool
-  def initialize(size, config, client_id, links)
+  def initialize(size, config, cache, client_id, links)
     @m    = Mutex.new # Data mutex for "producer" status
     @t    = [] #threads
     @w    = [] # workers
@@ -67,8 +67,8 @@ class WorkerPool
     @config = config
 
     @l    = links   # links
-    @dp   = []      # datapoints
-    @dpm  = Mutex.new # databse mutex for datapoint list
+    @dp   = cache      # datapoints
+    @dpm  = Mutex.new # databse mutex for datapoint list FIXME: delete this, it's handled by the store object now
 
     # stat]
     # Counts for the session.
@@ -191,7 +191,7 @@ class WorkerPool
 
       # write to datapoint list
       @dpm.synchronize{
-        @dp << DataPoint.new(link, headers, head, body, response_properties, @client_id, nil)
+        @dp[link.id] = DataPoint.new(link, headers, head, body, response_properties, @client_id, nil)
       }
       
       # Update stats counters.
@@ -215,7 +215,7 @@ class WorkerPool
 
       # write to datapoint list
       @dpm.synchronize{ 
-        @dp << DataPoint.new(link, "", "", "", {}, @client_id, "#{e}") 
+        @dp[link.id] = DataPoint.new(link, "", "", "", {}, @client_id, "#{e}") 
       }
 
       # update the counter.

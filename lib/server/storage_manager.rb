@@ -244,7 +244,7 @@ class StorageManager
   # Write a datapoint to disk
   def write_datapoint(dp, sample = @state.current_sample)
     $log.debug "Writing datapoint #{dp.link.id} (sample #{sample.id}) to disk."
-    dp_path = get_dp_filepath(dp_id, sample.id)
+    dp_path = get_dp_filepath(dp, sample.id)
     YAML.dump_file( dp, dp_path)
   end
 
