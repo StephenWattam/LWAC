@@ -148,6 +148,14 @@ private
   def cancel_batch
     return if(@links.class == Fixnum) # just in case we bail whilst waiting
 
+
+    if not @datapoints.empty? 
+      $log.info "Deleting local datapoints..."
+      @datapoints.each_key{|k|
+        @datapoints.delete(k)
+      }
+    end
+
     if @links.empty?
       $log.info "No links to cancel." 
       return
@@ -157,6 +165,7 @@ private
     connect do |s|
       s.cancel(@uuid)
     end
+
   end
 
   # Connect to the server, using backoff as described in the config file
@@ -265,4 +274,5 @@ dc = DownloadClient.new(config)
 # download
 dc.work
 
+# Kill storage if used
 

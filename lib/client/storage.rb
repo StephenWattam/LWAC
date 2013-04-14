@@ -25,8 +25,9 @@ class Store
     if type == :hash and @mutex then
       @mutex.synchronize{ @store[key] = value }
     elsif type == :pstore 
-      @index << key ## FIXME: mutex me
-      @store.transaction{ @store[key] = value }
+      @store.transaction{ 
+        @index << key ## FIXME: mutex me
+        @store[key] = value }
     else
       return @store[key] = value
     end
@@ -36,7 +37,9 @@ class Store
     if type == :hash and @mutex then
       @mutex.synchronize{ return @store[key] }
     elsif type == :pstore
-      @store.transaction{ return @store[key] }
+      @store.transaction{ 
+        @index << key ## FIXME: mutex me
+        return @store[key] }
     else
       return @store[key]
     end
@@ -78,6 +81,10 @@ class Store
     else
       return @store.length
     end
+  end
+
+  def empty?
+    length == 0
   end
 
   def keys

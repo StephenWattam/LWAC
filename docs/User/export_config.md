@@ -43,7 +43,16 @@ The hierachy is currently as below:
      * `.head` --- A string containing the HTTP headers
      * `.body` --- The body content of the HTTP response
      * `.response` --- The response object properties, as reported by cURL (Hash)
-
+       * `.round_trip_time` --- The total time for the request
+       * `.redirect_time` --- The time spend in redirects
+       * `.dns_lookup_time` --- The time spend looking up DNS
+       * `.effective_uri` --- The 'real' URI used, after redirects
+       * `.code` --- The response code
+       * `.download_speed` --- The download speed reported by cURL
+       * `.downloaded_bytes` --- The number of bytes downloaded, as reported by cURL
+       * `.encoding` --- The encoding, as reported by cURL.  Note that this seems unreliable
+       * `.truncated` --- Boolean. `true` if the body was truncated due to the server's maximum filesize limit
+       * `.mime_allowed` --- Boolean. `false` if the MIME type policy on the server caused this document's body to be discarded, or `true` otherwise
 
 
 

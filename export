@@ -197,6 +197,7 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
                          :body          => dp.body        || "",
                          :response      => dp.response_properties || {}
                         }
+          
             data.datapoint = Resource.new("datapoint", datapoint)
             #puts data.describe
 
