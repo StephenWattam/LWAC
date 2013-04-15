@@ -2,6 +2,10 @@ LWAC User Guide
 ===============
 Welcome to the LWAC user guide.  The purpose of this document is to explain some of the design concepts used and provide recipes for completing common tasks.
 
+Installation and Dependencies
+-----------------------------
+LWAC's dependencies and installer are documented [here](install.html)
+
 Concepts
 --------
 The [concepts](concepts.html) used in the model are explained here.

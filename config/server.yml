@@ -1,6 +1,6 @@
 ---
 :storage:                       # Options affecting the data storage engine
-  :root: test/corpus                   # A path to the corpus directory  (root/)
+  :root: corpus                   # A path to the corpus directory  (root/)
   :state_file: state.yml          # What to call the file where server state is stored  (root/state_file)
   :sample_subdir: samples         # Where to keep samples (root/sample_subdir)
   :sample_filename: sample.yml    # What to call each file (root/sample_subdir/id/sample.yml

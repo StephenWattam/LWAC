@@ -2,6 +2,10 @@ Tools
 =====
 LWAC's workflow is based around a simple import-download-export system, and as such there are three major tools in the distribution:
 
+Install
+-------
+The dependency installer is documented [elsewhere](install.html).
+
 Import
 ------
 The import tool is responsible for creating a metadata database, and importing links into it.  It does not create the whole corpus directory structure (this is handled by the download server), but will construct requisite SQL tables for handling sampling.
