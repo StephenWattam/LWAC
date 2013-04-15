@@ -4,6 +4,12 @@
 require 'pstore'
 
 class Store 
+  # Create a new store with a given file.
+  #
+  # If a filepath is given, PStore is used for on-disk, persistent storage.
+  # if thread_safe is true then:
+  #  - Hashes will be made thread-safe
+  #  - PStores will be switched to thread-safe mode
   def initialize(filepath=nil, thread_safe=true)
     # Record the filepath
     @filepath = filepath
@@ -21,30 +27,35 @@ class Store
     @mutex = ((thread_safe and not @filepath) ? Mutex.new : nil)
   end
 
+  # Assign a value to the store.
+  # 
+  #FIXME: improve return values.  This isn't critical but might be wise
   def []=(key, value)
     if type == :hash and @mutex then
       @mutex.synchronize{ @store[key] = value }
     elsif type == :pstore 
       @store.transaction{ 
-        @index << key ## FIXME: mutex me
+        @index << key 
         @store[key] = value }
     else
       return @store[key] = value
     end
   end
 
+  # Access a value at a given key
   def [](key)
     if type == :hash and @mutex then
       @mutex.synchronize{ return @store[key] }
     elsif type == :pstore
       @store.transaction{ 
-        @index << key ## FIXME: mutex me
+        @index << key 
         return @store[key] }
     else
       return @store[key]
     end
   end
 
+  #FIXME: improve return values.  This isn't critical but might be wise
   def delete(key)
     if type == :hash and @mutex then
       @mutex.synchronize{ @store.delete(key) }
@@ -56,6 +67,7 @@ class Store
     end
   end
 
+  # Loop over keys, calling the block given for each
   def each_key(&block)
     if type == :hash and @mutex then
       @mutex.synchronize{
@@ -75,6 +87,7 @@ class Store
     # TODO
   end
 
+  # Get the number of items in the store
   def length
     if type == :pstore
       return @index.length
@@ -83,10 +96,12 @@ class Store
     end
   end
 
+  # Returns true if the store is empty
   def empty?
     length == 0
   end
 
+  # Returns an array of keys currently used in the store
   def keys
     if type == :hash and @mutex then
       @mutex.synchronize{ return @store.keys }
@@ -97,14 +112,9 @@ class Store
     end
   end
 
-  # def method_missing(m, *args, &block)
-  #   @store.send(m, *args, &block)
-  # end
-
-  # def respond_to_missing(m, include_private=false)
-  #   @store.respond_to_missing(m, include_private)
-  # end
-
+  # Returns the type of store currently being used.
+  #  :hash for Hash-based,
+  #  :pstore for PStore-based.
   def type
     return :hash if not @filepath
     return :pstore

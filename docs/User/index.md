@@ -18,6 +18,9 @@ Workflows
 ---------
 LWAC's [workflow](workflows.html) was designed around longitudinal sampling.  Some common methods are explained here.
 
+Process Monitoring
+------------------
+LWAC is designed for longitudinal sampling, and as such a process monitor is a good idea to ensure that you are notified in case of any problems. [Monitoring and maintenance](monitoring.html) has its own section.
 
 
 Log Output
