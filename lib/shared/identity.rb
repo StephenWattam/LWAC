@@ -2,7 +2,7 @@
 
 
 # Overall LWAC version, as in the git tags
-VERSION = "0.2.0"
+VERSION = "0.2.0a"
 
 # Date of last significant edit
 DATE = "16-04-13"

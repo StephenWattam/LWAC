@@ -73,7 +73,7 @@ class MultiOutputLogger < Logger
         add(@lowest_level,  msg)
       } 
     else
-      add(@lowest_level, " *** No logs!") # FIXME Amusingly, this can never output
+      add(@lowest_level, " *** No logs!") # Amusingly, this can never output
     end
   end
 

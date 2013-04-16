@@ -71,7 +71,6 @@ def load_config
     logdevs << ld
   }
   $log = MultiOutputLogger.new(logdevs, config[:logging][:progname])
-  $log.summarise_logging
 
   
   

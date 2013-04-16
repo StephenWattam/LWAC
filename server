@@ -258,7 +258,8 @@ end
 
 # -----------------------------------------------------------------------------
 config = load_config 
-
+announce_version
+$log.summarise_logging
 
 # Fire up the server
 $server = DownloadServer.new(config)

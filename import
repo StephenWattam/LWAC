@@ -43,6 +43,11 @@ end
 
 # -----------------------------------------------------------------------------------------------------
 require 'sqlite3'
+
+
+require './lib/shared/identity.rb'
+announce_version
+
 # -----------------------------------------------------------------------------------------------------
 if create then
   puts "Creating db at #{db_file} using schema from #{SCHEMA_PATH}..."
