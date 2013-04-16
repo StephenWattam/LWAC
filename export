@@ -162,8 +162,10 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
                 :duration             => (as.sample_end_time && as.sample_start_time) ? as.sample_end_time - as.sample_start_time : 0,
                 :start_time_s         => as.sample_start_time.to_i,
                 :end_time_s           => as.sample_end_time.to_i,
-                :num_pending_links    => as.pending_links.length,
-                :pending_links        => as.pending_links.to_a,
+                :num_pending_links    => as.pending.length,
+                :pending_links        => as.pending.to_a,
+                :size_on_disk         => as.approx_filesize,
+                :last_contiguous_id   => as.last_dp_id,
                 :dir                  => storage.get_sample_filepath(as.id),
                 :path                 => File.join(storage.get_sample_filepath(as.id), server_config[:storage][:sample_filename]) 
                }

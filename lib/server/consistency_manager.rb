@@ -53,7 +53,7 @@ class ConsistencyManager
     start_time = (@state.current_sample) ? @state.current_sample.sample_start_time : nil
     return @checked_out_links.values.length, 
            @state.current_sample.size, 
-           @links.length, 
+           @state.current_sample.progress, 
            start_time
   end
 
@@ -149,7 +149,7 @@ class ConsistencyManager
           @storage.write_datapoint(dp)
 
           # increment the progress counter
-          @state.current_sample.link_complete
+          @state.current_sample.link_complete( dp.response_properties[:downloaded_bytes] || 0 )
           
           # They shouldn't even be in the list below, hence it being commented out.
           #@links.delete(dp.link.id)
@@ -205,8 +205,8 @@ private
     @state.last_sample_duration             = (Time.now - @state.current_sample.sample_start_time).round
     @state.current_sample.sample_end_time   = Time.now
 
-    $log.info "Sample duration: #{@state.last_sample_duration.round}s"
     $log.info "*** Closing sample #{@state.current_sample}"
+    $log.info "Sample duration: #{@state.last_sample_duration.round}s, size: #{(@state.current_sample.approx_filesize / 1024 / 1024).round(2)}MB"
 
     # Write sample to disk
     @storage.write_sample(@state.current_sample)

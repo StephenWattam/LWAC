@@ -30,6 +30,8 @@ The hierachy is currently as below:
      * `.duration` --- How long did the sample take, in seconds? (`end_time_s` - `start_time_s`)
      * `.num_pending_links` --- How many links are still waiting to be completed?
      * `.pending_links` --- A list of links still waiting to be downloaded.
+     * `.last_contiguous_id` --- The last id read from the database.  Links yet to be completed equal (sample.size - last_contiguous_id) union (pending_links)
+     * `.size_on_disk` --- The approximate filesize on disk, in bytes, of all data in this sample
      * `.dir` --- The directory for that sample, relative to the current working directory
      * `.path` --- The filepath of the sample information file, relative to the current working directory
    * `.datapoint` --- Datapoint-level variables

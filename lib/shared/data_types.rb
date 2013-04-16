@@ -66,7 +66,7 @@ end
 # Will throw errors if one tries to edit it whilst closed.
 class Sample
   attr_reader :id, :sample_start_time, :size, :progress
-  attr_accessor :sample_end_time, :last_dp_id, :pending
+  attr_accessor :sample_end_time, :last_dp_id, :pending, :approx_filesize
 
   def initialize(id, size, start_id=0, pending_links=Set.new, permit_sampling=false, sample_start_time=Time.now)
     @id                 = id
@@ -77,6 +77,8 @@ class Sample
     @pending            = pending_links   # links read from db non-contiguously and simply not used yet
     @last_dp_id         = start_id        # Where to start reading next IDs
 
+    # cumulative filesize of all data in sample
+    @approx_filesize    = 0
 
     @permit_sampling    = permit_sampling 
     @sample_start_time  = sample_start_time
@@ -99,7 +101,8 @@ class Sample
     @permit_sampling
   end
 
-  def link_complete
+  def link_complete(filesize)
+    @approx_filesize += filesize
     @progress += 1
   end
 

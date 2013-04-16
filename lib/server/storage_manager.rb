@@ -335,7 +335,7 @@ class StorageManager
     # Load all links and work out which files should
     # actually be in the dir
     all_link_ids = read_link_ids
-    sampled = all_link_ids - sample.pending_links
+    sampled = all_link_ids - sample.pending # FIXME
 
     # Now check they all exist
     if(verify_datapoints) then

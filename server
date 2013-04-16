@@ -191,7 +191,7 @@ private
       if tdiff > 0 then
         rate  = done.to_f / tdiff.to_f 
         eta   = Time.now + (rate * remain).to_i
-        $log.info "ETA for this sample: #{eta} (#{(rate * 60*60).round(1)} links/hr)"
+        $log.info "ETA for this sample: #{eta} (#{(rate * 60*60).round} links/hr)"
       end
     end
 
