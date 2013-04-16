@@ -34,7 +34,9 @@ class DownloadClient
     # Current working links and download policy
     @policy       = {}
     @links        = []
-    @datapoints   = Store.new(@config[:client][:cache_file], true)
+
+    $log.info "Creating cache #{(@config[:client][:cache_file] == nil) ? "in RAM" : "at #{@config[:client][:cache_file]}"}"
+    @datapoints   = Store.new(@config[:client][:cache_file])
 
     # Should we really care about being able to contact the server?
     @shutdown     = false
@@ -107,12 +109,13 @@ private
       if(ret.class == Fixnum)
         $log.info "Waiting for #{ret}s until #{Time.now + ret} at the server's request."
         sleep([ret, @config[:network][:maximum_reconnect_time]].min)
-      elsif(ret.class == Array)
+      elsif(ret.class == Array and ret.length == 2)
         @policy, @links = ret
         $log.info "Received #{@links.length}/#{@config[:client][:batch_capacity]} links from server."
         return
       else
         $log.warn "Received unrecognised return from server of type: #{@links.class}.  Retrying..."
+        $log.debug "Server said: '#{ret}'"
         increment_reconnection_timer
       end
     end
@@ -126,12 +129,13 @@ private
 
       # Take them out of the pstore up to a given size limit, then send that chunk
       pending_size = 0.0
+      $log.debug "Counting data for upload..."
       while(@datapoints.length > 0 and pending_size < @config[:client][:check_in_size]) do
         key = @datapoints.keys[0]
         dp = @datapoints[key]
-        pending_size += (Marshal.dump(dp).length.to_f / 1024.0 / 1024.0)
-        @pending << @datapoints[key]
-        @datapoints.delete(key)
+        pending_size += dp.response_properties[:downloaded_bytes].to_f / 1024.0 / 1024.0 #(Marshal.dump(dp).length.to_f / 1024.0 / 1024.0)
+        @pending << dp
+        @datapoints.delete_from_index(key)
       end
 
       # send datapoints
@@ -141,6 +145,9 @@ private
       end
       $log.debug "Done."
     end
+
+    # Here datapoints.length == 0, so wipe the cache
+    @datapoints.delete_all
   end
 
   # Cancel the batch of links we currently have checked out.
@@ -150,10 +157,11 @@ private
 
 
     if not @datapoints.empty? 
-      $log.info "Deleting local datapoints..."
+      $log.info "Deleting local datapoints from cache..."
       @datapoints.each_key{|k|
-        @datapoints.delete(k)
+        @links << k
       }
+      @datapoints.close
     end
 
     if @links.empty?
@@ -207,7 +215,7 @@ private
         compute_reconnection_time
 
         # Warn the user and wait until it's time to try again
-        $log.error "Failed to connect (#{e})."
+        $log.warn "Failed to connect (#{e})."
       end
     end
 

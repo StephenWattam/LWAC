@@ -27,7 +27,7 @@ class ConsistencyManager
     @config     = config[:sampling_policy]
 
     # Two lists to handle link checkout
-    @links      = Set.new(@state.current_sample.pending_links.clone)
+    @links      = @state.current_sample.pending
     @checked_out_links = {}
 
 
@@ -68,26 +68,56 @@ class ConsistencyManager
 
     links = []
     @mutex.synchronize{
-      number = @links.length if number == :all
+      number = @state.remaining if number == :all
 
       # Check out links and reserve them
-      $log.debug "Checking out #{number}/#{@links.length} links."
+      $log.debug "Checking out #{number}/#{@state.current_sample.remaining} links."
 
-      count = 0
-      @links.each{|id|
-        break if (count+=1) > number
+      # If the cache isn't large enough, read more from the DB
+      if @links.length < number then
+        $log.debug "Reading #{number-@links.length} links from database (id > #{@state.current_sample.last_dp_id})"
+
         # Read from DB
-        link = @storage.read_link(id)
-        # Add to the list of recorded checkec out ones
-        @checked_out_links[id] = link
-        # add to the list to return
-        links << link
-        # and delete from the pending list
-        @links.delete(id)
+        ids = @storage.read_link_ids(@state.current_sample.last_dp_id.to_i, (number - @links.length))
+
+        # increment the last count
+        @state.current_sample.last_dp_id = ids.max
+
+        # put in the links list
+        @links += ids
+      end
+
+      # then assign from @links
+      count = 0
+      select = @links.classify{ ((count+=1) <= number) }
+
+      # put back the ones we don't want
+      @links = select[false] || Set.new
+
+      # grab the ones we do and get them from the db
+      links = @storage.read_links( select[true].to_a )
+
+      # then pop them in the checkout list
+      links.each{|l|
+        @checked_out_links[l.id] = l
       }
+
+      # @links.each{|id|
+      #   break if (count+=1) > number
+      #   # Read from DB
+      #   link = @storage.read_link(id)
+      #   # Add to the list of recorded checkec out ones
+      #   @checked_out_links[id] = link
+      #   # add to the list to return
+      #   links << link
+      #   # and delete from the pending list
+      #   @links.delete(id)
+      # }
 
       $log.debug "Done."
     }
+
+    $log.debug "Total memory cache usage: #{@checked_out_links.length + @links.length} links"
 
     # TODO: exception handling.
     return links
@@ -113,12 +143,15 @@ class ConsistencyManager
 
     @mutex.synchronize{
       # Check in each datapoint
-      $log.debug "Checked in #{datapoints.length} datapoints."
+      $log.debug "Checking in #{datapoints.length} datapoints."
       datapoints.each{|dp|
-        if(@checked_out_links[dp.link.id] and @state.current_sample.remove_link(dp.link.id))
+        if(@checked_out_links.delete(dp.link.id))
           @storage.write_datapoint(dp)
-          @state.current_sample.remove_link(dp.link.id)
-          @checked_out_links.delete(dp.link.id)
+
+          # increment the progress counter
+          @state.current_sample.link_complete
+          
+          # They shouldn't even be in the list below, hence it being commented out.
           #@links.delete(dp.link.id)
         else
           $log.warn "Attempted to check in link with ID #{dp.link.id}, but the sample says it's already been done."
@@ -146,6 +179,7 @@ class ConsistencyManager
 
     # un-check-out all checked-out links
     uncheck(@checked_out_links.values)
+    @state.current_sample.pending = @links
 
     # Close storage manager
     @storage.close
@@ -177,7 +211,7 @@ private
     # Write sample to disk
     @storage.write_sample(@state.current_sample)
 
-    # Reopen the sample.
+    # Open the next sample.
     open_sample()
   end
 
@@ -186,8 +220,8 @@ private
 
     # Increment sample
     @state.last_sample_id         = @state.current_sample.id
-    @state.current_sample         = Sample.new(@state.current_sample.id.to_i + 1, @storage.read_link_ids)
-    @links                        = @state.current_sample.pending_links.clone # Ensure we take a copy, don't go editing the sample
+    @state.current_sample         = Sample.new(@state.current_sample.id.to_i + 1, @storage.count_links)
+    @links                        = @state.current_sample.pending  # XXX why?... Ensure we take a copy, don't go editing the sample
     @state.next_sample_due        = compute_next_sample_time
     
     # Tell people

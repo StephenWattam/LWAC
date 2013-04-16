@@ -1,7 +1,8 @@
 # Storage/cache library for clients
 # This is a simple key-value store either on disk or in memory, designed for storing datapoints before they're shipped off to the server
 
-require 'pstore'
+require 'fileutils'
+
 
 class Store 
   # Create a new store with a given file.
@@ -10,113 +11,57 @@ class Store
   # if thread_safe is true then:
   #  - Hashes will be made thread-safe
   #  - PStores will be switched to thread-safe mode
-  def initialize(filepath=nil, thread_safe=true)
-    # Record the filepath
-    @filepath = filepath
-
-    # Create the store
-    if @filepath then
-      @store = PStore.new(@filepath, thread_safe)
-      @index = []
-    else
-      @store = Hash.new
-      @index = nil 
-    end
-
+  def initialize(filepath=nil)
     # Create a mutex if using a hash
-    @mutex = ((thread_safe and not @filepath) ? Mutex.new : nil)
-  end
+    @mutex = Mutex.new
 
-  # Assign a value to the store.
-  # 
-  #FIXME: improve return values.  This isn't critical but might be wise
-  def []=(key, value)
-    if type == :hash and @mutex then
-      @mutex.synchronize{ @store[key] = value }
-    elsif type == :pstore 
-      @store.transaction{ 
-        @index << key 
-        @store[key] = value }
+    if filepath == nil or filepath.to_s == ""
+      @store = Hash.new
+      @type = :hash
     else
-      return @store[key] = value
+      @store = FileCache.new(filepath)
+      @type = :file
     end
   end
 
-  # Access a value at a given key
-  def [](key)
-    if type == :hash and @mutex then
-      @mutex.synchronize{ return @store[key] }
-    elsif type == :pstore
-      @store.transaction{ 
-        @index << key 
-        return @store[key] }
-    else
-      return @store[key]
-    end
+  # ---------------------------------------------------------------------------
+  # Method_missing handles most things...
+
+  def method_missing(m, *args, &block)
+    @store.send(m, *args, &block)
+  rescue NoMethodError => e
+    super
   end
 
-  #FIXME: improve return values.  This isn't critical but might be wise
-  def delete(key)
-    if type == :hash and @mutex then
-      @mutex.synchronize{ @store.delete(key) }
-    elsif type == :pstore
-      @index.delete(key)  # FIXME: mutex me
-      @store.transaction{ @store.delete(key) }
-    else
-      return @store.delete(key)
-    end
+  # Handle disparity between APIs
+  # ---------------------------------------------------------------------------
+
+  # Closes the file system, missing from Hash
+  def close
+    return if @type == :hash
+    @store.close
   end
 
-  # Loop over keys, calling the block given for each
-  def each_key(&block)
-    if type == :hash and @mutex then
+  def delete_from_index(key)
+    if @type == :hash
       @mutex.synchronize{
-        @store.each_key{|k|
-          yield(k)
-        }
-      }
-    elsif type == :pstore
-      @index.each{|k|
-        yield(k)
-      }
-    else
-      @store.each_key{|k|
-        yield(k)
+        return @store.delete(key)
       }
     end
-    # TODO
+    @store.delete_from_index(key)
   end
 
-  # Get the number of items in the store
-  def length
-    if type == :pstore
-      return @index.length
+  # Removes all items
+  def delete_all
+    # GC's probably quicker than looping and removing stuff
+    if @type == :hash   
+      @mutex.synchronize{
+        @store = Hash.new 
+      }
     else
-      return @store.length
+      @store.delete_all
     end
   end
 
-  # Returns true if the store is empty
-  def empty?
-    length == 0
-  end
 
-  # Returns an array of keys currently used in the store
-  def keys
-    if type == :hash and @mutex then
-      @mutex.synchronize{ return @store.keys }
-    elsif type == :pstore
-      return @index
-    else
-      return @store.keys
-    end
-  end
-
-  # Returns the type of store currently being used.
-  #  :hash for Hash-based,
-  #  :pstore for PStore-based.
-  def type
-    return :hash if not @filepath
-    return :pstore
-  end
 end

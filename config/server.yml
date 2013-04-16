@@ -42,7 +42,7 @@
     :ignore_case: true
     :list:                 # List of mime types to allow/deny
       - ^text\/?.*$       # text-only mimes
-      - ^.+$              # anything with a valid content-type
+        #- ^.+$              # anything with a valid content-type
   :curl_workers:                          # Options affecting individual web request clients themselves
     :max_redirects: 5                       # How many redirects to follow.  5 seems standard in browsers
     :useragent: ! '"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.2.11) Gecko/20101012 Firefox/3.6.11"'  # How to ID ones'self to the server

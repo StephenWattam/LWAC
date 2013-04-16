@@ -28,12 +28,8 @@ def announce_version
   end
 
   if $log
-    msgs.each{|m|
-      $log.info(m)
-    }
+    msgs.each{|m| $log.info(m) }
   else
-    msgs.each{|m|
-      puts m
-    }
+    msgs.each{|m| puts m }
   end
 end

@@ -78,6 +78,8 @@ class WorkerPool
     @count_other = 0
     @complete    = 0
     @errors      = 0
+    @bytes       = 0
+    @start_time  = 0
     @global_stats_mutex = Mutex.new
   
   end
@@ -96,6 +98,7 @@ class WorkerPool
   def work
     # Make things do the work
     $log.debug "Starting threads..."
+    @start_time = Time.now
     @w.each{|w|
       # Give each worker a handle back to the dispatcher to get data.
       @t << Thread.new(w, self){|w, d|
@@ -109,6 +112,7 @@ class WorkerPool
   def wait
     $log.debug "Waiting for #{@t.length} worker[s] to close."
     @t.each{|t| t.join}
+    @end_time = Time.now
     $log.info "Workers all terminated naturally."
   end
 
@@ -127,6 +131,11 @@ class WorkerPool
     $log.info "    other  : #{@count_other}"
     $log.info "  Errors   : #{@errors}"
     $log.info "  Complete : #{@complete}"
+
+    if @start_time and @end_time then
+      rate = @bytes*8 / (@end_time - @start_time)
+      $log.info "Downloaded #{(@bytes.to_f / 1024.0 / 1024.0).round(2)}MB in #{(@end_time - @start_time).round}s (#{(rate / 1024 / 1024).round(2)}Mbps)"
+    end
   end
 
   def kill_workers
@@ -134,6 +143,7 @@ class WorkerPool
     @t.each{|t|
       t.kill
     }
+    @end_time = Time.now
     $log.info "Worker threads killed."
   end
 
@@ -143,6 +153,7 @@ class WorkerPool
     @w.each{|w|
       w.close
     }
+    @end_time = Time.now
     $log.info "Workers closed by request."
   end
    
@@ -178,6 +189,7 @@ class WorkerPool
         elsif not ignore
           body += str
         else
+          # ignore data
         end
 
         # Have to return number of bytes to curb
@@ -243,6 +255,7 @@ class WorkerPool
           else          @count_other += 1
         end
         @complete += 1
+        @bytes += res.downloaded_bytes.to_i
       }
 
 

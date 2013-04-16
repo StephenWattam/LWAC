@@ -88,7 +88,8 @@ class DatabaseConnection
     start_transaction if trans
     end_transaction if @transaction and not trans 
 
-    #puts "DEBUG: #{sql}"
+    $log.debug "SQL: #{sql}"
+
 
     # run the query
     #puts "<#{sql.split()[0]}, #{trans}, #{@transaction}>"
@@ -169,8 +170,13 @@ class DatabaseStorageManager < DatabaseConnection
   end
 
   # Read all the link IDs
-  def read_link_ids()
-    Set.new(select(@config[:table], [@config[:fields][:id]]).flatten)
+  # TODO
+  def read_link_ids(from=0, n=nil)
+    where = "id > #{from.to_i}" 
+    where += " limit #{n}" if n
+    
+    ids = select(@config[:table], [@config[:fields][:id]], where).flatten
+    return Set.new(ids)
   end
 
   # Retrieve a single link with a given ID
@@ -178,19 +184,51 @@ class DatabaseStorageManager < DatabaseConnection
     link = select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} == #{id}")
     return Link.new(link[0][0], link[0][1])
   end
-end
 
+  # Retrieve many links from an array of IDs
+  def read_links_from_array(ids = [])
+    links = []
+    select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} in (#{ids.join(',')})").each{|l|
+      links << Link.new(l[0], l[1])
+    }
 
+    return links
+  end
 
+  # Count the number of links
+  def count_links(min_id = nil)
 
+    where = nil
+    if min_id != nil then
+      where = "#{@config[:fields][:id]} > #{min_id}"
+    end
 
-# Serialise direct to a file using YAML.
-module YAML
-  def self.dump_file(obj, fn)
-     self.dump(obj, File.open(fn, 'w')).close
+    count = select(@config[:table], ["count(*)"], where)
+    return count[0][0].to_i
   end
 end
 
+
+
+
+# LEGACY
+## Serialise direct to a file using YAML.
+#module YAML
+#  def self.dump_file(obj, fn)
+#     self.dump(obj, File.open(fn, 'w')).close
+#  end
+#end
+#
+
+module Serialiser
+  def self.load_file(fn)
+    File.open(fn, 'r'){ |f| Marshal.load(f) }
+  end
+
+  def self.dump_file(obj, fn)
+    File.open(fn, 'w'){ |f| Marshal.dump(obj, f) }
+  end
+end
 
 
 
@@ -214,19 +252,21 @@ class StorageManager
     # Try to load the current server state
     @state_filename = File.join(@root, config[:state_file])
     if(File.exist?(@state_filename))
-      @state = YAML.load_file(@state_filename)
+      @state = Serialiser.load_file(@state_filename)
     else
       $log.debug "No state.  Creating a new state file at #{@state_filename}"
       @state = ServerState.new()
-      YAML.dump_file(@state, @state_filename)
+      Serialiser.dump_file(@state, @state_filename)
     end
 
     # Create the sample subdir
     FileUtils.mkdir_p(get_sample_filepath()) if not File.exist?(get_sample_filepath)
   end
 
-  # Read some links from the database
+  # Read some links from the database using either a range, 
+  # or an array, depending on the first argument
   def read_links(range_low = nil, range_high = nil)
+    return @db.read_links_from_array(range_low) if range_high == nil and range_low.is_a?(Array)
     @db.read_links(range_low, range_high)
   end
 
@@ -236,8 +276,14 @@ class StorageManager
   end
 
   # Read all IDs as a set
-  def read_link_ids()
-    @db.read_link_ids
+  def read_link_ids(from=nil, n=nil)
+    @db.read_link_ids(from, n)
+  end
+
+  # Count links
+  # optionally min_id is the lowest id to count from
+  def count_links(min_id=0)
+    @db.count_links(min_id)
   end
 
   ## Datapoint read/write
@@ -245,14 +291,14 @@ class StorageManager
   def write_datapoint(dp, sample = @state.current_sample)
     $log.debug "Writing datapoint #{dp.link.id} (sample #{sample.id}) to disk."
     dp_path = get_dp_filepath(dp, sample.id)
-    YAML.dump_file( dp, dp_path)
+    Serialiser.dump_file( dp, dp_path)
   end
 
   # Read a datapoint from disk
   def read_datapoint(dp_id, sample = @state.current_sample)
     $log.debug "Reading datapoint #{dp_id} (sample #{sample.id}) from disk."
     dp_path = get_dp_filepath(dp_id, sample.id)
-    YAML.load_file( dp_path )
+    Serialiser.load_file( dp_path )
   end
 
   ## Datapoint disk lookup
@@ -262,14 +308,14 @@ class StorageManager
   # Write a finalised sample to disk in its proper location.
   def write_sample(sample = @state.current_sample)
     sample_path = File.join( get_sample_filepath(sample.id), @config[:sample_filename])
-    YAML.dump_file( sample, sample_path )
+    Serialiser.dump_file( sample, sample_path )
   end
 
   # Read a finalised sample ID from disk.
   # raises Errno::ENOENT if not there
   def read_sample(sample_id = @state.last_sample_id)
     sample_path = File.join( get_sample_filepath(sample_id), @config[:sample_filename])
-    YAML.load_file( sample_path )
+    Serialiser.load_file( sample_path )
   end
 
 
@@ -350,7 +396,7 @@ class StorageManager
 
   # Write the server state to disk
   def write_state
-    YAML.dump_file( @state, @state_filename)
+    Serialiser.dump_file( @state, @state_filename)
   end
 
 end
@@ -365,12 +411,17 @@ if __FILE__ == $0 then
   $log = MultiOutputLogger.new($stdout)
   $log.set_level(:default, Logger::DEBUG)
 
-  config = YAML.load_file("../config/server.yml")
+  config = Serialiser.load_file("config/server.yml")
 
   sm = StorageManager.new(config[:storage])
-  sm.read_links.each{|link|
-    puts "LINK: #{link}"
-  }
+
+  # puts "#{sm.count_links(0)}"
+ 
+  # puts "#{sm.read_link_ids( 1, 2).to_a}"
+
+  # sm.read_links([1,1,2,3,4,4,2,1,2,2,1]).each{|link|
+  #   puts "LINK: #{link}"
+  # }
 
 end
 

@@ -100,7 +100,7 @@ class DownloadServer
     $log.error "Attempt to check in #{erroneous} datapoint[s] which were not checked out to him." if erroneous > 0
 
     # Prevent the timeout firing
-    if(@dispatched[client_id].length == 0) then
+    if(@dispatched[client_id] and @dispatched[client_id].length == 0) then
       @timeouts[client_id].kill if @timeouts[client_id]
       @timeouts[client_id] = nil
     end
@@ -170,6 +170,7 @@ private
   def summary
     co, sample, remain, stime = @cm.counts
 
+
     # Debug info
     str = ["CM: #{co}/#{sample} checked out (#{remain} remaining)."]
     str << "Summary of Clients:"
@@ -187,9 +188,11 @@ private
     done  = sample - (remain + co)
     if stime and done > 0
       tdiff = Time.now.to_i - (stime || Time.at(0)).to_i
-      rate  = done.to_f / tdiff.to_f
-      eta   = Time.now + (rate * remain).to_i
-      $log.info "Processing at #{(rate * 60*60).round(1)} links/hr --- ETA #{eta}"
+      if tdiff > 0 then
+        rate  = done.to_f / tdiff.to_f 
+        eta   = Time.now + (rate * remain).to_i
+        $log.info "ETA for this sample: #{eta} (#{(rate * 60*60).round(1)} links/hr)"
+      end
     end
 
   end

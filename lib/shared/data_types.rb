@@ -65,20 +65,24 @@ end
 #
 # Will throw errors if one tries to edit it whilst closed.
 class Sample
-  attr_reader :id, :pending_links, :sample_start_time, :size
-  attr_accessor :sample_end_time
+  attr_reader :id, :sample_start_time, :size, :progress
+  attr_accessor :sample_end_time, :last_dp_id, :pending
 
-  def initialize(id, pending_links=[], permit_sampling=false, sample_start_time=Time.now)
-    @id             = id
-    @pending_links  = pending_links || Set.new
-    @size           = @pending_links.length
-    @pending_links = Set.new(@pending_links) if not @pending_links.is_a?(Set)
+  def initialize(id, size, start_id=0, pending_links=Set.new, permit_sampling=false, sample_start_time=Time.now)
+    @id                 = id
+    
+    @size               = size.to_i       # Number of datapoints in sample (read from db)
+    @progress           = 0               # How many links have been done in total
+
+    @pending            = pending_links   # links read from db non-contiguously and simply not used yet
+    @last_dp_id         = start_id        # Where to start reading next IDs
+
 
     @permit_sampling    = permit_sampling 
     @sample_start_time  = sample_start_time
     @sample_end_time    = nil
   end
-
+    
   # Start sampling.
   def open_sample 
     @permit_sampling    = true
@@ -87,7 +91,7 @@ class Sample
 
   # Has this sample got any links pending?
   def complete?
-    @pending_links.length == 0
+    @progress == @size
   end
 
   # Has the sample been opened?
@@ -95,15 +99,17 @@ class Sample
     @permit_sampling
   end
 
-  # Remove a link from the pending queue
-  def remove_link(id)
-    raise "Sampling without opening the sample first!" if not @permit_sampling
-    @pending_links.delete(id)
+  def link_complete
+    @progress += 1
+  end
+
+  def remaining
+    @size - @progress
   end
 
   # Nicer output
   def to_s
-    "<Sample #{@id}, #{@pending_links.length}/#{@size} [#{open? ? "open":"closed"}, #{complete? ? "complete":"incomplete"}]>"
+    "<Sample #{@id}, #{@progress}/#{@size} [#{open? ? "open":"closed"}, #{complete? ? "complete":"incomplete"}]>"
   end
 end
 
@@ -119,7 +125,7 @@ class ServerState
 
   def initialize(last_sample_id=-1, current_sample=nil, next_sample_due=nil)
     @last_sample_id             = last_sample_id
-    @current_sample             = current_sample        || Sample.new(-1, [])
+    @current_sample             = current_sample        || Sample.new(-1, 0)
     @next_sample_due            = next_sample_due       || Time.now
     @last_sample_duration       = last_sample_duration  || 1
   end

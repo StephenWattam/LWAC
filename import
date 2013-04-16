@@ -206,8 +206,8 @@ db = DatabaseConnection.new(db_file, 100, SQLITE_PRAGMA)
 begin
   puts "Importing links..."
   count = 0;
-  File.read(list).each_line{|line|
-    line.encode!("UTF-8", {:invalid => :replace, :undef => :replace, :univeral_newline => true}) if(FIX_ENCODING)
+  File.read(list).force_encoding('UTF-8').each_line{|line|
+    line.encode!("UTF-8", {:replace => nil, :invalid => :replace, :undef => :replace, :univeral_newline => true})# if(FIX_ENCODING)
     line.chomp!
     if line.length > 0 then
       db.insert("links", {"uri" => line})
