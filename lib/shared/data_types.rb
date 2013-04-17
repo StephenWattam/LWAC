@@ -102,7 +102,7 @@ class Sample
   end
 
   def link_complete(filesize)
-    @approx_filesize += filesize
+    @approx_filesize += (filesize || 0)
     @progress += 1
   end
 
@@ -125,8 +125,10 @@ end
 #  * The time when the next sample is due
 class ServerState
   attr_accessor :last_sample_id, :current_sample, :next_sample_due, :last_sample_duration
+  attr_reader :version
 
-  def initialize(last_sample_id=-1, current_sample=nil, next_sample_due=nil)
+  def initialize(version, last_sample_id=-1, current_sample=nil, next_sample_due=nil)
+    @version                    = version
     @last_sample_id             = last_sample_id
     @current_sample             = current_sample        || Sample.new(-1, 0)
     @next_sample_due            = next_sample_due       || Time.now

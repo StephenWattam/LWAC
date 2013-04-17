@@ -102,7 +102,7 @@ private
   def acquire_batch
     loop do
       ret = connect do |s|
-        s.check_out(@uuid, @config[:client][:batch_capacity])
+        s.check_out(Identity::VERSION, @uuid, @config[:client][:batch_capacity])
       end
 
       # If the server tells us to back off, so do.
@@ -141,7 +141,7 @@ private
       # send datapoints
       $log.info "Sending #{@pending.length} datapoints (~#{pending_size.round(2)}MB) to server..."
       connect do |s|
-        s.check_in(@uuid, @pending)
+        s.check_in(Identity::VERSION, @uuid, @pending)
       end
       $log.debug "Done."
     end
@@ -171,7 +171,7 @@ private
 
     $log.info "Cancelling at least #{@links.length} links."
     connect do |s|
-      s.cancel(@uuid)
+      s.cancel(Identity::VERSION, @uuid)
     end
 
   end
@@ -275,7 +275,7 @@ end
   
 # Load config and logs using launch_tools
 config = load_config 
-announce_version
+Identity::announce_version
 $log.summarise_logging
 
 # Start the client going

@@ -62,6 +62,4 @@ class Store
       @store.delete_all
     end
   end
-
-
-end
+end 

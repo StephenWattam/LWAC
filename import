@@ -46,7 +46,7 @@ require 'sqlite3'
 
 
 require './lib/shared/identity.rb'
-announce_version
+Identity::announce_version
 
 # -----------------------------------------------------------------------------------------------------
 if create then

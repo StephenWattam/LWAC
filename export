@@ -16,7 +16,7 @@ if __FILE__ != $0 then
 end
 require './lib/shared/launch_tools.rb'
 config = load_config 
-announce_version
+Identity::announce_version
 $log.summarise_logging
 
 # Attempt to load server config
@@ -135,7 +135,8 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
             :complete_samples       => available_samples.map{|as| as.id},
             :next_sample_date       => storage.state.next_sample_due,
             :current_sample_id      => storage.state.current_sample.id,
-            :config                 => server_config
+            :config                 => server_config,
+            :version                => storage.state.version
            }
   data.server = Resource.new("server", server)
   #puts server.describe
@@ -163,7 +164,11 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
                 :start_time_s         => as.sample_start_time.to_i,
                 :end_time_s           => as.sample_end_time.to_i,
                 :num_pending_links    => as.pending.length,
-                :pending_links        => as.pending.to_a,
+
+                # TODO: test the expression below selects incomplete links correctly                                          
+                :pending_links        => storage.read_link_ids.to_a.delete_if{|id| as.pending.to_a.include?(id) or id > as.last_dp_id },
+
+
                 :size_on_disk         => as.approx_filesize,
                 :last_contiguous_id   => as.last_dp_id,
                 :dir                  => storage.get_sample_filepath(as.id),

@@ -221,7 +221,8 @@ class DownloadService < MarilynRPC::Service
   #end
 
   # Send links to a user, and keep track of who asked for them
-  def check_out(client_id, number_requested)
+  def check_out(version, client_id, number_requested)
+    version_check(version)
     MUTEX.synchronize{
       $server.check_out(client_id, number_requested)
     }
@@ -232,7 +233,8 @@ class DownloadService < MarilynRPC::Service
   end
   
   # Accept datapoints back from the user
-  def check_in(client_id, datapoints)
+  def check_in(version, client_id, datapoints)
+    version_check(version)
     MUTEX.synchronize{
       $server.check_in(client_id, datapoints)
     }
@@ -243,7 +245,8 @@ class DownloadService < MarilynRPC::Service
   end
 
   # Cancel links ahead of time
-  def cancel(client_id)
+  def cancel(version, client_id)
+    version_check(version)
     MUTEX.synchronize{
       $server.cancel(client_id)
     }
@@ -251,6 +254,13 @@ class DownloadService < MarilynRPC::Service
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
     return nil
+  end
+
+private
+
+  # Check version is compatible
+  def version_check(ver)
+    raise "Client rejected: incompatible version '#{ver}'" if not Identity::network_is_compatible?(ver)
   end
 end
 
@@ -261,7 +271,7 @@ end
 
 # -----------------------------------------------------------------------------
 config = load_config 
-announce_version
+Identity::announce_version
 $log.summarise_logging
 
 # Fire up the server

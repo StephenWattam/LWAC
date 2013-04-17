@@ -1,6 +1,10 @@
 require File.join(File.dirname(__FILE__), "../shared/data_types.rb")
 require File.join(File.dirname(__FILE__), "../shared/multilog.rb")
 
+# for version checks
+require File.join(File.dirname(__FILE__), "../shared/identity.rb")
+
+
 
 require 'yaml'
 require 'sqlite3'
@@ -253,9 +257,20 @@ class StorageManager
     @state_filename = File.join(@root, config[:state_file])
     if(File.exist?(@state_filename))
       @state = Serialiser.load_file(@state_filename)
+
+      if not @state.respond_to?(:version) or not Identity::storage_is_compatible?(@state.version) then
+        if @state.respond_to?(:version)
+          $log.fatal "The corpus you are trying to load was written by LWAC version #{@state.version}" 
+        else 
+          $log.fatal "No version info---the corpus was written by a prerelease version of LWAC"
+        end
+        $log.fatal "This server is only compatible with versions: #{Identity::COMPATIBLE_VERSIONS.sort.join(", ")}"
+        raise "Incompatible storage format"
+      end
+
     else
       $log.debug "No state.  Creating a new state file at #{@state_filename}"
-      @state = ServerState.new()
+      @state = ServerState.new(Identity::VERSION)
       Serialiser.dump_file(@state, @state_filename)
     end
 

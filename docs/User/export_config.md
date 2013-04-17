@@ -17,6 +17,7 @@ The hierachy is currently as below:
      * `.complete_samples` --- A list containing the IDs of all the complete samples
      * `.next_sample_date` --- The date of the next sample due
      * `.current_sample_id` --- The ID of the current sample (the next, incomplete, one)
+     * `.version` --- The version of the server used to write the corpus
      * `.config` --- The server configuration, as a hash
    * `.sample` --- Sample-level variables
      * `.id` --- The ID of the sample

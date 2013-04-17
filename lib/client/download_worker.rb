@@ -237,7 +237,7 @@ class WorkerPool
                              :effective_uri     => fix_encoding(res.last_effective_url.to_s),
                              :code              => res.response_code,
                              :download_speed    => res.download_speed,
-                             :downloaded_bytes  => res.downloaded_bytes,
+                             :downloaded_bytes  => res.downloaded_bytes || 0,
                              :encoding          => encoding,
                              :truncated         => ignore == true,
                              :mime_allowed      => allow_mime
