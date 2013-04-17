@@ -18,6 +18,7 @@
       :id: id                         # The ID field is called 'id' by default  
       :uri: uri                       # The field with the URIs in it is called 'uri' by default
 :sampling_policy:               # Defines sampling times
+  :sample_limit:  2               # Stop at the nth sample (or refuse to sample if n is already over this!)
   :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:

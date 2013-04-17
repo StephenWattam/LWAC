@@ -38,9 +38,11 @@ class ConsistencyManager
     end
     $log.info "Current sample: #{@state.current_sample}."
     if(@state.current_sample.open?) 
+      # Prevents the server completing a sample even if already open...
+      # check_sample_limit
       $log.info "Sample opened at #{@state.current_sample.sample_start_time}, resuming..."
     else
-      if(wait < 0)
+      if(wait <= 0)
         $log.info "Sample is closed but ready to open."
       else
         $log.info "Sample closed: wait #{wait}s before sampling until #{Time.now + wait}."
@@ -181,6 +183,7 @@ class ConsistencyManager
     uncheck(@checked_out_links.values)
     @state.current_sample.pending = @links
 
+
     # Close storage manager
     @storage.close
   end
@@ -217,6 +220,7 @@ private
 
   # Open a new sample with or without closing the old one (used as bootstrap)
   def open_sample
+    check_sample_limit
 
     # Increment sample
     @state.last_sample_id         = @state.current_sample.id
@@ -230,6 +234,14 @@ private
    
     # Ensure we don't lose it if we're forced to close 
     @storage.update_state(@state)
+  end
+
+  # Check against the config's sample limit, and raise sigint to stop if so.
+  def check_sample_limit
+    if @state.current_sample and @config[:sample_limit] and @config[:sample_limit].to_i > 0 and (@state.current_sample.id.to_i + 1) >= @config[:sample_limit]  then
+      $log.fatal "*** Sample limit (#{@config[:sample_limit]}) reached.  Shutting down..."
+      raise SignalException.new('SIGTERM')
+    end
   end
 end
 

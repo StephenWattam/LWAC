@@ -12,7 +12,7 @@
   :uuid_salt: "LOCAL3"                     # What to call ones'self in logs.  Will be prefixed to a hash computed from the hostname.
   :batch_capacity: 5000                   # How many links to download at once?  Careful not to run out of RAM or take too long.
   :check_in_size: 15                     # How large chunks should be when checking in in MB.  Around 10MB seems fast for the Marilyn-RPC library
-  :simultaneous_workers: 800                # Simultaneous workers bigger is more parallel.
+  :simultaneous_workers: 200                # Simultaneous workers bigger is more parallel.
   :cache_file:        # Set to nil to use ram
   # :cache_file: /tmp/client_cache       # Set to nil to use ram
 :logging:                                 # Log output options

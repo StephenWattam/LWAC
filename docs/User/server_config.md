@@ -29,8 +29,9 @@ Storage is defined by the `/storage/` key, and contains details on the corpus an
 
 Sampling Policy
 ---------------
-The sampling policy used by the server is defined by two parameters, *duration* and *alignment*.  
+The sampling policy used by the server is defined by three parameters, *count*, *duration* and *alignment*.  
 
+ * `sample_limit` --- Sample at most this number of samples.  Note that the IDs start from 0, so the last sample will have the ID `sample_limit - 1`.  The server will quit when trying to open the `n+1`th sample.
  * `sample_time` --- A sample's *duration* is the minimum time a sample may take.  For example, if this is a daily sample, it should be set to 84600 (the number of seconds in a day) in order to sample once at midnight each day.
  * `sample_alignment` --- A sample's *alignment* defines whereabouts within each sample time the sample may start.  Using the above example, setting this to 7200 would cause samples to begin at 2am each day.
 
