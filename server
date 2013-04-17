@@ -80,7 +80,7 @@ class DownloadServer
 
   # Returns either a list of link objects or nil to delete them
   def check_in(client_id, datapoints)
-    $log.info"Client #{client_id} wishes to check in #{datapoints.length} datapoint[s]."
+    $log.info"Client #{client_id} checking in #{datapoints.length} datapoint[s]..."
 
 
 
@@ -97,7 +97,7 @@ class DownloadServer
       end
     }
 
-    $log.error "Attempt to check in #{erroneous} datapoint[s] which were not checked out to him." if erroneous > 0
+    $log.error "Failed to check in #{erroneous} datapoint[s] which were not checked out to him." if erroneous > 0
 
     # Prevent the timeout firing
     if(@dispatched[client_id] and @dispatched[client_id].length == 0) then
@@ -108,7 +108,7 @@ class DownloadServer
     # then check them in
     @cm.check_in(check_in_list)
 
-    $log.info "Done."
+    $log.debug "Check in complete"
     
     summary
   end
@@ -116,7 +116,7 @@ class DownloadServer
   # Returns nil
   def cancel(client_id)
     if(@dispatched[client_id]) then
-      $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} link[s]." 
+      $log.info "Client #{client_id} is cancelling #{@dispatched[client_id].values.length} link[s]..." 
 
       # Uncheck the item from the consistency manager
       @cm.uncheck(@dispatched[client_id].values) if(@dispatched[client_id])
@@ -129,7 +129,7 @@ class DownloadServer
       @timeouts[client_id] = nil
 
 
-      $log.info "Done."
+      $log.debug "Cancel complete"
     else
       $log.error "Client #{client_id} attempted to cancel links it does not have checked out."
     end
@@ -158,7 +158,7 @@ private
 
       # Then blank this client's list
       @dispatched[client_id] = {} 
-      $log.info "Done."
+      $log.debug "Done."
     else
       $log.warn "Client #{client_id} cleaned its own links before disconnecting.  This is usually a sign it has caught a signal."
     end
@@ -168,7 +168,8 @@ private
 
   # Present a list of clients and their checked out links.
   def summary
-    co, sample, remain, stime = @cm.counts
+    co, sample, done, stime = @cm.counts
+    remain = sample - done
 
 
     # Debug info
@@ -182,16 +183,15 @@ private
 
 
     # Say progress
-    $log.info "#{co} + #{remain} = #{co+remain}/#{sample} links checked out + available = remaining/total (#{((remain + co).to_f/sample.to_f * 100.0).round(2)}%)."
+    $log.info "#{co} / #{done} / #{sample} links checked out/complete/total (#{((done).to_f/sample.to_f * 100.0).round(2)}%)."
 
     # Compute ETA
-    done  = sample - (remain + co)
     if stime and done > 0
       tdiff = Time.now.to_i - (stime || Time.at(0)).to_i
       if tdiff > 0 then
         rate  = done.to_f / tdiff.to_f 
-        eta   = Time.now + (rate * remain).to_i
-        $log.info "ETA for this sample: #{eta} (#{(rate * 60*60).round} links/hr)"
+        eta   = Time.now + (remain / rate).to_i
+        $log.info "ETA for this sample: #{eta} (#{rate.round(1)} links/s, #{(rate * 60*60).round} links/hr)"
       end
     end
 
@@ -226,6 +226,8 @@ class DownloadService < MarilynRPC::Service
     MUTEX.synchronize{
       $server.check_out(client_id, number_requested)
     }
+  rescue SignalException => e
+    raise e
   rescue Exception => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
@@ -238,6 +240,8 @@ class DownloadService < MarilynRPC::Service
     MUTEX.synchronize{
       $server.check_in(client_id, datapoints)
     }
+  rescue SignalException => e
+    raise e
   rescue Exception => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
@@ -250,6 +254,8 @@ class DownloadService < MarilynRPC::Service
     MUTEX.synchronize{
       $server.cancel(client_id)
     }
+  rescue SignalException => e
+    raise e
   rescue Exception => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")

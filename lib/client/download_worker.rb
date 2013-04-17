@@ -11,18 +11,7 @@ require File.join(File.dirname(__FILE__), "storage.rb")
 class Worker
   def initialize(id, config)
     @id     = id
-
-    # Set up curl
-    @c = Curl::Easy.new
-    @c.unrestricted_auth = true
-
-    # TODO: make this configurable (it already is, but still...)
-    @c.ssl_verify_peer = false
-    @c.ssl_verify_host = false
-    config.each{|k, v|
-      eval("@c.#{k} = #{v}")
-    }
-
+    @config = config
     @abort = false
   end
 
@@ -30,8 +19,8 @@ class Worker
   def work(dispatcher)
     while(link = dispatcher.get_link) do
       $log.debug "W#{@id}: Downloading link #{link.id}: #{link.uri}"
-      @c.url = link.uri
-      dispatcher.complete_request(@id, link, @c)
+
+      dispatcher.complete_request(@id, link, new_curl(link.uri))
 
       return if(@abort)
       #puts "STUB: worker #{@id} given job from dispatcher #{dispatcher}"
@@ -41,6 +30,26 @@ class Worker
   # Closes the connection to the server
   def close
     @abort = true
+  end
+
+private
+  def new_curl(uri)
+    # Set up curl
+    c = Curl::Easy.new
+
+    # TODO: make this configurable (it already is, but still...)
+    c.unrestricted_auth = true
+    c.ssl_verify_peer = false
+    c.ssl_verify_host = false
+
+    @config.each{|k, v|
+      eval("c.#{k} = #{v}")
+    }
+
+    # Set URI
+    c.url = uri
+
+    return c
   end
 end
 
@@ -198,14 +207,14 @@ class WorkerPool
 
       # Perform a request prepared elsewhere,
       # can run alongside other requests
-      res.perform
+      res.perform if not @config[:dry_run]
 
       # Output the result to debug log
       $log.debug "W#{worker_id}: Completed request #{link.id}, response code #{res.response_code}."
 
       # Fix encoding of head if required
       $log.debug "Fixing header encoding..."
-      head                = fix_encoding(res.header_str)
+      head                = fix_encoding(res.header_str.to_s)
 
       # Generate a hash of headers
       $log.debug "W#{worker_id}: Parsing headers..."
@@ -226,7 +235,7 @@ class WorkerPool
 
 
       # Normalise encoding (unless turned off)
-      $log.debug "W#{worker_id}: Fixing encoding..."
+      $log.debug "W#{worker_id}: Fixing body encoding..."
       body                = fix_encoding(body)
 
 
@@ -240,7 +249,8 @@ class WorkerPool
                              :downloaded_bytes  => res.downloaded_bytes || 0,
                              :encoding          => encoding,
                              :truncated         => ignore == true,
-                             :mime_allowed      => allow_mime
+                             :mime_allowed      => allow_mime,
+                             :dry_run           => @config[:dry_run]
                              }
 
 
@@ -261,12 +271,16 @@ class WorkerPool
 
     rescue SignalException => se
       $log.fatal "Signal caught: #{e.message}"
-      $log.fatal "Since I'm sampling right now, this will be cancelled and passed back."
+      $log.fatal "Since I'm sampling right now, I will kill workers before shutdown."
       kill_workers
       raise se
     rescue Exception => e
-      $log.error "W#{worker_id}: Error in link #{link.id}: #{e.to_s}."
-      $log.debug "#{e.backtrace.join("\n")}"
+      if e.class.to_s =~ /^Curl::Err::/ then
+        $log.debug "W#{worker_id}: Link #{link.id}: #{e.to_s[11..-1]}"
+      else
+        $log.error "W#{worker_id}: Exception retrieving #{link.id}: #{e.to_s}."
+        $log.debug "#{e.backtrace.join("\n")}"
+      end
 
       # write to datapoint list
       @dp[link.id] = DataPoint.new(link, "", "", "", {}, @client_id, "#{e}") 

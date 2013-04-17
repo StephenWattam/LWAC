@@ -9,11 +9,11 @@
   :maximum_reconnect_time: 240            # The maximum time we take before trying again
   :connect_failure_penalty: 3             # The amount we wait extra each time it fails.
 :client:                                # Properties of the client
-  :uuid_salt: "LOCAL"                     # What to call ones'self in logs.  Will be prefixed to a hash computed from the hostname.
+  :uuid_salt: "LOCAL3"                     # What to call ones'self in logs.  Will be prefixed to a hash computed from the hostname.
   :batch_capacity: 5000                   # How many links to download at once?  Careful not to run out of RAM or take too long.
-  :check_in_size: 100                     # How large chunks should be when checking in in MB.  Smaller is less efficient, but also less likely to fail if some particularly large files are downloaded.  
-  :simultaneous_workers: 100                 # Simultaneous workers.  Kernel limits usually hit at about 120-130 on linux
-  :cache_file: /tmp/client_cache       # Set to nil to use ram
+  :check_in_size: 15                     # How large chunks should be when checking in in MB.  Around 10MB seems fast for the Marilyn-RPC library
+  :simultaneous_workers: 800                # Simultaneous workers bigger is more parallel.
+  :cache_file:        # Set to nil to use ram
   # :cache_file: /tmp/client_cache       # Set to nil to use ram
 :logging:                                 # Log output options
   :progname: Client                         # Name used in logs

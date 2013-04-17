@@ -77,6 +77,7 @@ private
   # This starts up a worker pool, and waits until they are done.
   def process_links
     $log.info "Creating worker pool and starting work..."
+    $log.warn "Server requested a dry run.  No actual work will be done" if @config[:client][:dry_run]
     pool = WorkerPool.new(@config[:client][:simultaneous_workers], @policy, @datapoints, @uuid, @links)
     pool.init_workers
     pool.work
@@ -100,6 +101,8 @@ private
 
   # Grab a batch of links from the server
   def acquire_batch
+    $log.info "Applying for a new batch of #{@config[:client][:batch_capacity]} links..."
+
     loop do
       ret = connect do |s|
         s.check_out(Identity::VERSION, @uuid, @config[:client][:batch_capacity])
@@ -197,6 +200,8 @@ private
         }
 
       # On error
+      rescue SignalException => e
+        raise e
       rescue Exception => e
         
         # Simply quit if we have been told to shut down
@@ -229,6 +234,8 @@ private
     response = nil
     begin
       response = yield(download_service)
+    rescue SignalException => e
+      raise e
     rescue Exception => e
       $log.error "Exception: #{e}"
       $log.debug e.backtrace.join("\n")

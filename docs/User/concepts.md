@@ -39,9 +39,9 @@ The corpus itself is structured as a root directory, containing a specific struc
 
     root/
     root/database.db
-    root/state.yml
-    root/files/sample_id/sample.yml
-    root/files/sample_id/1/2/3/456.meta
+    root/state
+    root/files/sample_id/sample
+    root/files/sample_id/1/2/3/456
 
 
 The corpus includes:
@@ -49,19 +49,20 @@ The corpus includes:
  * The metadata database (described elsewhere)
  * The state of the current sample.  This is stored as a serialised ruby object so that a sample may be resumed later if the server is stopped.
  * A list of sample ID folders containing:
-   * A YAML file describing the properties of this sample as a serialised ruby Sample object
+   * A file describing the properties of this sample as a serialised ruby Sample object
    * A structure of directories describing link IDs, each of which has up to N files within it (as defined in the server config).  This structure uses the first characters of the ID to nest directories in order to avoid filesystem limits on inode size and speed up random access, i.e.:
-      0/1/1.meta
-      0/1/2.meta
-      0/1/3.meta
-      0/2/1.meta
-      0/2/2.meta
-      0/2/3.meta
+      0/1/1
+      0/1/2
+      0/1/3
+      0/2/1
+      0/2/2
+      0/2/3
       etc.
 
 
 ### File Formats
-Each of the files within a corpus, with the exception of the metadata database, is a YAML-serialised ruby object, as defined in `/lib/shared/data_types.rb`.
+Each of the files within a corpus, with the exception of the metadata database, is a serialised ruby object, as defined in `/lib/shared/data_types.rb`.  These objects are serialised using Marshal, and are thus binary format.
 
+It is possible to switch to YAML format, which is readable by other tools and languages, however, this breaks compatibility with corpora of the other format.  If you wish to make this change for a specific research purpose, see the [server config](server_config.yml).  It's also worth noting that YAML is roughly 60 times slower.
 
 

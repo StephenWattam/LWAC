@@ -55,6 +55,7 @@ The hierachy is currently as below:
        * `.downloaded_bytes` --- The number of bytes downloaded, as reported by cURL
        * `.encoding` --- The encoding, as reported by cURL.  Note that this seems unreliable
        * `.truncated` --- Boolean. `true` if the body was truncated due to the server's maximum filesize limit
+       * `.dry_run` --- Boolean.  `true` if this datapoint was sampled as part of a dry run (no data will have been transferred to/from the web)
        * `.mime_allowed` --- Boolean. `false` if the MIME type policy on the server caused this document's body to be discarded, or `true` otherwise
 
 

@@ -21,6 +21,7 @@
   :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:
+  :dry_run: false                    # Don't actually do any downloading if set to true
     # ----
   :fix_encoding: true                       # Attempt to fix the encoding of output?
   :target_encoding: UTF-8                   # Target encoding
@@ -72,7 +73,7 @@
   :logs:                          # A list of log outputs
     :default:                       # Call this log "default"
       :dev: STDOUT                  # Where to log.  Give a filename, or use 'STDOUT' or 'STDERR'
-      :level: :debug                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :info                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

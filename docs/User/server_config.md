@@ -45,7 +45,8 @@ If you wish to edit the sample computation algorithm, it resides in `lib/server/
 Client Policy
 -------------
 This section describes the properties each client must inherit from its server.  It describes things such as how the client appears to external websites, and how it normalises and packages its data before upload to the server.
- 
+
+ * `dry_run` --- Boolean.  Set to `true` to disable web access on the client, so that it samples empty datapoints.
  * `max_body_size` --- Stop downloading when this number of bytes have been downloaded.  Used to prevent aberrantly large files from filling RAM or disk storage.
  * `fix_encoding` --- Boolean. Should the encoding be normalised to `target_encoding`?
  * `target_encoding` --- The name of an encoding to normalise to.  Default is 'UTF-8', but anything supported by Ruby's String#encode method will work

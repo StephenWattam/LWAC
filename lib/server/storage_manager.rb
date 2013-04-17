@@ -4,6 +4,7 @@ require File.join(File.dirname(__FILE__), "../shared/multilog.rb")
 # for version checks
 require File.join(File.dirname(__FILE__), "../shared/identity.rb")
 
+require File.join(File.dirname(__FILE__), "../server/serialiser.rb")
 
 
 require 'yaml'
@@ -215,26 +216,6 @@ end
 
 
 
-# LEGACY
-## Serialise direct to a file using YAML.
-#module YAML
-#  def self.dump_file(obj, fn)
-#     self.dump(obj, File.open(fn, 'w')).close
-#  end
-#end
-#
-
-module Serialiser
-  def self.load_file(fn)
-    File.open(fn, 'r'){ |f| Marshal.load(f) }
-  end
-
-  def self.dump_file(obj, fn)
-    File.open(fn, 'w'){ |f| Marshal.dump(obj, f) }
-  end
-end
-
-
 
 
 
@@ -249,6 +230,9 @@ class StorageManager
     @root           = config[:root]
     @files_per_dir  = config[:files_per_dir]
 
+    # Debug info
+    $log.debug "Storage manager starting, serialising using #{Serialiser::METHOD}"
+
     # Database storage
     config[:database][:filename] = File.join(config[:root], config[:database][:filename])
     @db = DatabaseStorageManager.new(config[:database])
@@ -258,6 +242,7 @@ class StorageManager
     if(File.exist?(@state_filename))
       @state = Serialiser.load_file(@state_filename)
 
+      # Version check on the state file that describes the corpus
       if not @state.respond_to?(:version) or not Identity::storage_is_compatible?(@state.version) then
         if @state.respond_to?(:version)
           $log.fatal "The corpus you are trying to load was written by LWAC version #{@state.version}" 
@@ -406,7 +391,7 @@ class StorageManager
     filepath = get_sample_filepath( sample_id, dir, true)
 
     # Join the datapoint ID
-    return File.join(filepath, "#{id.to_s}.yml")
+    return File.join(filepath, "#{id.to_s}")
   end
 
   # Write the server state to disk

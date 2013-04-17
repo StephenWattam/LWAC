@@ -2,6 +2,11 @@ Limits and Performance
 ======================
 LWAC was designed to maximise throughput to the web, and as such easily stretches certain system resources.  Extracting the best performance requires knowledge of some of the limits of your underlying system, as well as the architecture of LWAC.  This guide should cover each of the points, and explain which need attention for which conditions.
 
+Throughput
+----------
+The system is capable of downloading around 2.5 million pages per hour per client when resource speed is not an issue.  This slows to roughly 100,000 per hour per client when using real-world, year-old URL lists.  
+
+Most speed issues are caused by the slow response of servers, for which parallelism is the only practical solution.  If your URL list includes many links pointing to the same server, it's worth noting that the tool can download at around 20Mbps/client in a sustained manner---this most certainly breaks netiquette and may be sufficient to overload some hosts.
 
 Network
 -------
@@ -81,8 +86,6 @@ The client uses disks infrequently or never, depending on the configuration used
 Most operating systems impose limits on the number of sockets that may be open at any one time.  Since the client is heavily multithreaded, it is capable of exceeding these limits with relative ease.
 
 On unix systems, the limit can be read using the command `ulimit -a`, where it is typically listed as the number of file descriptors allowed (minus one for the cache file and one for each log).
-
-In testing, the linux kernel starts timing sockets out above about 120-150 simultaneous connections.  This is well below the limit set in `/etc/limits.conf`, and exhibits stochastic behaviour, indicating that the kernel is dropping data out of necessity.  In practice there is only value in setting the number of simultaneous connections high enough to saturate the internet connection, a figure likely to be well below 100.
 
 #### Cache Filesize
 The file caching system is based on a single file, which will grow to the size of the sum of all data downloaded in one batch.  In testing with HTML data, this generally means about 10MB for every thousand links.
