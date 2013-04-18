@@ -343,6 +343,7 @@ class StorageManager
       sampled.each{ |link_id|
         path = get_dp_filepath( link_id, sample_id )
 
+
         raise "Datapoint #{link_id} is missing."          if not File.readable? path
         raise "Cannot read datapoint with ID #{link_id}"  if not File.readable? path
       }

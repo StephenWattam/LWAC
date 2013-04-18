@@ -164,11 +164,7 @@ CSV.open(config[:output][:filename], 'w') do |csv_out|
                 :start_time_s         => as.sample_start_time.to_i,
                 :end_time_s           => as.sample_end_time.to_i,
                 :num_pending_links    => as.pending.length,
-
-                # TODO: test the expression below selects incomplete links correctly                                          
-                :pending_links        => storage.read_link_ids.to_a.delete_if{|id| as.pending.to_a.include?(id) or id > as.last_dp_id },
-
-
+                :pending_links        => storage.read_link_ids.to_a.delete_if{|id| (not as.pending.to_a.include?(id)) or (id > as.last_dp_id) },
                 :size_on_disk         => as.approx_filesize,
                 :last_contiguous_id   => as.last_dp_id,
                 :dir                  => storage.get_sample_filepath(as.id),
