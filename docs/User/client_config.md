@@ -10,8 +10,6 @@ This section defines which server to connect to.
 
  * `address` --- The IP address or hostname at which to contact the server
  * `port` --- The port to use when contacting the server
- * `service_name` --- The name of the service exposed by the Marilyn RPC system.  Should correspond to that set in the server configuration.
-
 
 
 Network

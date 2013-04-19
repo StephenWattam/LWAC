@@ -83,17 +83,22 @@ Client Management
 -----------------
 The server's responsibilities for managing clients as they connect and process work mean that it must present meaningful time limits on these connections (lest clients crash or misbehave).  These settings govern the rate at which clients are presumed to work, before the server starts re-assigning their work to other clients.
 
- * `time_per_link` --- How long, in seconds, each client gets to download a link before its batch is cancelled and moved back into the main pool of unallocated links.  On most systems this should not be over a second or two---even if some links time out, it is unlikely that all reach their timeout.  
+
+The client is given only a finite time to complete its work before the server will assume it has died and re-assign its links elsewhere.  This is controlled by two parameters---one for clients that have not been deen before, and one that modifies the dynamic timeout computed by the server.
+
+ * `time_per_link` --- How long, in seconds, a new client is given per link to download a batch.  Clients typically download fairly fast, so this should be quite low (below 5).
+ * `dynamic_time_overestimate` --- How much to multiply the client's last performance by when computing a timeout i.e. value of "1.2" will give 20% overhead.
+
+These next to parameters define how long clients are told to wait when they contact the server but find no work available (for example, no sample is open right now).
+
  * `empty_client_backoff` --- If no links are available but a sample is open, tell clients to retry after this time.
  * `delay_overestimate` --- When a sample is closed, clients are told to wait until after the sample opening time.  A small amount is added to this to prevent clients from hitting the final seconds before the sample is open.  This should be less than `empty_client_backoff` for it to make any difference.  I recommend below 10 seconds.
 
 
 Server
 ------
-These settings govern the network properties of the server, and the Marilyn RPC system it uses for data transfer.
+These settings govern the network properties of the server, as used for data transfer to and from clients.
 
-
- * `service_name` --- The name of the service as described by Marilyn.  This should be the same between the server and client configuration, but otherwise is of little importance and may be set to an arbitrary value.
  * `interfaces[]{}` --- A list of interfaces to listen on.  Each interface should be a hash containing an ip and a port:
     * `interfaces[]/interface` --- The hostname or IP address of an interface on which to listen
     * `interfaces[]/port` --- The port on which to listen for this interface

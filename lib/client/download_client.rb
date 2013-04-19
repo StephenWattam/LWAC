@@ -225,7 +225,7 @@ private
     compute_reconnection_time
 
     # Start doing things!  Register as a client
-    download_service = client.for(:downloader)
+    download_service = client.for(:lwacdownloader)
     $log.debug "Done.  Yielding to perform actions."
 
     # Then yield the service to our caller

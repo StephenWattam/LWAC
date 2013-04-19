@@ -16,10 +16,11 @@ require 'eventmachine'
 class DownloadServer
   def initialize(config)
     @config       = config
-    @dispatched   = {}
+    @dispatched   = {}  # links checked out to clients
     @cm           = ConsistencyManager.new(config)
-    @timeouts     = {}
 
+    @timeouts     = {}  # timeout threads for clients
+    @rates        = {}  # estimates for how fast clients are
   end
 
   # Returns either a list of Link objects or a delay to wait for (FixNum)
@@ -43,7 +44,7 @@ class DownloadServer
       links = @dispatched[client_id].values
     else
       # Else, check out some new ones
-      links                   = @cm.check_out(request)
+      links = @cm.check_out(request)
       links.each{|l|
         @dispatched[client_id][l.id] = l
       }
@@ -61,13 +62,17 @@ class DownloadServer
     @timeouts[client_id].kill if @timeouts[client_id]
 
     # Register the new timeout and start a thread to call its cancel method
-    timeout = (@config[:client_management][:time_per_link] * @dispatched[client_id].length)
+    timeout = estimate_client_timeout(client_id, @dispatched[client_id].length)
+      # (@config[:client_management][:time_per_link] * @dispatched[client_id].length)
     @timeouts[client_id] = Thread.new{ 
       sleep(timeout)
       cancel_timeout(client_id)
     }
 
-    $log.info "Dispatched #{@dispatched[client_id].length} link[s], timeout #{timeout}s (#{Time.now + timeout})"
+    # Ensure the rate computer knows it's got work
+    register_checkout_rate(client_id)
+
+    $log.info "Dispatched #{@dispatched[client_id].length} link[s], timeout #{timeout.round(1)}s (#{Time.now + timeout})"
 
     summary
 
@@ -77,8 +82,6 @@ class DownloadServer
   # Returns either a list of link objects or nil to delete them
   def check_in(client_id, datapoints)
     $log.info"Client #{client_id} checking in #{datapoints.length} datapoint[s]..."
-
-
 
     # Check we have actually checked them out
     check_in_list = []
@@ -100,6 +103,9 @@ class DownloadServer
       @timeouts[client_id].kill if @timeouts[client_id]
       @timeouts[client_id] = nil
     end
+
+    # Estimate client's work rate based on the amount it's done.
+    compute_client_rate(client_id, check_in_list.length)
 
     # then check them in
     @cm.check_in(check_in_list)
@@ -142,6 +148,32 @@ class DownloadServer
   end
 
 private
+
+  # Record the last time the client asked for work
+  def register_checkout_rate(client_id)
+    @rates[client_id] = Time.now
+  end
+
+  # Transform the time in the rates listing to a rate,
+  # based on the time the client last asked for work
+  def compute_client_rate(client_id, num_links)
+    if @rates[client_id].is_a?(Time) then
+      @rates[client_id] = num_links / (Time.now - @rates[client_id]).to_f
+      $log.debug "Client #{client_id} is working at #{@rates[client_id].round(2)} links/s"
+    end
+  end
+
+  # Use past experience to compute a timeout for a given client
+  def estimate_client_timeout(client_id, link_count)
+    $log.debug "Estimating client timeout..."
+    if @rates[client_id].is_a?(Numeric) then
+      return (@rates[client_id] * link_count) * 1.2  # TODO: make 1.2 configurable
+    end
+
+    # Fall back on the old system
+    return (@config[:client_management][:time_per_link] * link_count)
+  end
+
   # The client has not got back to us, so revoke its links
   def cancel_timeout(client_id)
     if(@dispatched[client_id]) then
@@ -164,7 +196,7 @@ private
 
   # Present a list of clients and their checked out links.
   def summary
-    co, sample, done, stime = @cm.counts
+    co, sample, done, stime, cached = @cm.counts
     remain = sample - done
 
 
@@ -179,7 +211,7 @@ private
 
 
     # Say progress
-    $log.info "#{co} / #{done} / #{sample} links checked out/complete/total (#{((done).to_f/sample.to_f * 100.0).round(2)}%)."
+    $log.info "#{co} / #{cached} / #{done} / #{sample} links checked out/cached/complete/total (#{((done).to_f/sample.to_f * 100.0).round(2)}%)."
 
     # Compute ETA
     if stime and done > 0
@@ -201,7 +233,7 @@ end
 
 class DownloadService < MarilynRPC::Service
   # TODO: make this configurable
-  register :downloader
+  register :lwacdownloader
   
   # Ensure we handle only one thing at once
   MUTEX = Mutex.new

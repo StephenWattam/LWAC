@@ -98,7 +98,7 @@ class Sample
 
   # Has this sample got any links pending?
   def complete?
-    @progress == @size
+    @progress >= @size
   end
 
   # Has the sample been opened?

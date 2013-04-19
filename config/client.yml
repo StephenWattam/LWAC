@@ -2,7 +2,6 @@
 :server:                                # Options affecting which server to use
   :address: "127.0.0.1"                   # IP or hostname
   :port: 27400                            # Port
-  :service_name: :downloader              # Marilyn service name.  Leave as :downloader for now.
 :network:                               # Network behaviour when talking to the server
   :connect_timeout: 20                    # How long we give the socket to respond
   :minimum_reconnect_time: 1              # The minimum time we take before trying again
@@ -10,7 +9,7 @@
   :connect_failure_penalty: 3             # The amount we wait extra each time it fails.
 :client:                                # Properties of the client
   :uuid_salt: "LOCAL3"                     # What to call ones'self in logs.  Will be prefixed to a hash computed from the hostname.
-  :batch_capacity: 5000                   # How many links to download at once?  Careful not to run out of RAM or take too long.
+  :batch_capacity: 500                   # How many links to download at once?  Careful not to run out of RAM or take too long.
   :check_in_size: 15                     # How large chunks should be when checking in in MB.  Around 10MB seems fast for the Marilyn-RPC library
   :simultaneous_workers: 400                # Simultaneous workers bigger is more parallel.
   :cache_file:        # Set to nil to use ram

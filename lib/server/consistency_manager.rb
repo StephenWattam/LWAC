@@ -34,8 +34,15 @@ class ConsistencyManager
     # Print handy messages to people
     if(@state.last_sample_id == -1)
       $log.info "No sampling has occurred yet, this is a new deployment."
-      open_sample() # Bootstrap the sample
+      open_sample # Bootstrap the sample
     end
+
+    # Print more handy messages to people
+    if(not @state.current_sample.open? and @state.current_sample.complete?)
+      $log.info "Current sample is closed and complete.  Opening a new one..."
+      open_sample
+    end
+
     $log.info "Current sample: #{@state.current_sample}."
     if(@state.current_sample.open?) 
       # Prevents the server completing a sample even if already open...
@@ -56,7 +63,8 @@ class ConsistencyManager
     return @checked_out_links.values.length, 
            @state.current_sample.size, 
            @state.current_sample.progress, 
-           start_time
+           start_time,
+           @links.length
   end
 
 

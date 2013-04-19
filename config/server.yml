@@ -18,7 +18,7 @@
       :id: id                         # The ID field is called 'id' by default  
       :uri: uri                       # The field with the URIs in it is called 'uri' by default
 :sampling_policy:               # Defines sampling times
-  :sample_limit:  2               # Stop at the nth sample (or refuse to sample if n is already over this!)
+  :sample_limit:  0               # Stop at the nth sample (or refuse to sample if n is already over this!)
   :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:
@@ -57,7 +57,8 @@
     :dns_cache_timeout: 10                  # DNS lookup timeout.
     :ftp_response_timeout: 10               # FTP response timeout.
 :client_management:             # Management of downloader clients
-  :time_per_link: 5               # Allow n second[s] per link before timing out and resetting the client's assignments.  Make this very low.  Normally 1-2 is acceptable unless the corpus is small or the client is low-concurrency
+  :time_per_link: 5               # Allow n second[s] per link before timing out and resetting the client's assignments.  Used when the server doesn't yet know how fast a client is.
+  :dynamic_time_overestimate: 1.3 # Allow n times the client's previous performance before timing out and resetting the client's assignments.
   :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
   :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
 :server:                        # Network server properties
@@ -68,13 +69,12 @@
     # - 
     #   :interface: 148.88.227.135    
     #   :port: 27400                  
-  :service_name: :downloader      # The service name exposed over marilyn (for now, ALWAYS leave as :downloader)
 :logging:                       # Logging and output options
   :progname: Server               # What to call the app in logs
   :logs:                          # A list of log outputs
     :default:                       # Call this log "default"
       :dev: STDOUT                  # Where to log.  Give a filename, or use 'STDOUT' or 'STDERR'
-      :level: :info                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :debug                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              
