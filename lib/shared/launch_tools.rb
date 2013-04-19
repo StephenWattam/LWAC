@@ -31,6 +31,13 @@ def check_gems(*gems)
   }
 end
 
+def print_usage
+  $stderr.puts "USAGE: #{$0} TOOL CONFIG"
+  $stderr.puts ""
+  $stderr.puts " TOOL   : one of 'server', 'client', 'import' or 'export'"
+  $stderr.puts " CONFIG : A path to the config file for the tool"
+  $stderr.puts ""
+end
 
 
 # -----------------------------------------------------------------------------
@@ -38,11 +45,17 @@ end
 def load_config 
 
   # First, check arguments are fine.
-  if ARGV.length == 0 or not File.readable?(ARGV[0]) then
-    $stderr.puts "USAGE: #{$0} PATH_TO_CONFIG"
+  if ARGV.length < 2 or not File.readable?(ARGV[1]) then
+    print_usage()
     exit(1)
   end
 
+  # Check the tool is a valid one
+  if not %w{server client import export}.include?(ARGV[0]) then
+    $stderr.puts "Not a valid command: #{ARGV[0]}"
+    print_usage()
+    exit(1)
+  end
 
   # Require things we need for the below
   require 'yaml'
@@ -55,7 +68,8 @@ def load_config
 
 
   # Then load the config
-  config = YAML.load_file(ARGV[0])
+  tool   = ARGV[0].to_sym
+  config = YAML.load_file(ARGV[1])
 
 
 
@@ -82,5 +96,5 @@ def load_config
 
 
   # Return the config we've loaded.
-  return config
+  return tool, config
 end

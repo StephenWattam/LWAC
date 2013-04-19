@@ -1,16 +1,12 @@
-#!/usr/bin/env ruby
+# FIXME: this is an inelegant way of managing load paths
+$:.unshift( File.join( File.dirname(__FILE__), "../", "shared" ) )
+$:.unshift( File.dirname(__FILE__) )
 
-if __FILE__ != $0 then
-  $stderr.puts "This script is intended to be run directly."
-  exit(1)
-end
-require './lib/shared/launch_tools.rb'
-check_gems('marilyn-rpc', 'eventmachine')
-
-# Load all libs from shared, storage and server
-Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
-Dir.glob(File.join(File.dirname(__FILE__), "lib", "storage", "*.rb")).each{|x| require x}
-Dir.glob(File.join(File.dirname(__FILE__), "lib", "server", "*.rb")).each{|x| require x}
+require 'multilog'
+require 'identity'
+require 'consistency_manager'
+require 'serialiser'
+require 'storage_manager'
 
 # Load marilyn, eventmachine gems
 require 'marilyn-rpc'
@@ -274,29 +270,3 @@ end
 
 
 
-
-# -----------------------------------------------------------------------------
-config = load_config 
-Identity::announce_version
-$log.summarise_logging
-
-# Fire up the server
-$server = DownloadServer.new(config)
-
-$log.info "Registering exit handler for download server."
-at_exit{ $server.close }
-
-
-#
-$log.info "Listening for connections connections on:"
-EM.run{
-  config[:server][:interfaces].each{ |iface|
-    ip, port = iface[:interface], iface[:port]
-
-    $log.info "  #{ip}:#{port}"
-    EM.start_server(ip, port, MarilynRPC::Server)
-    # ALSO POSSIBLE:
-    #  EM.start_unix_domain_server("tmp.socket", MarilynRPC::Server)
-  }
-}
-$log.info "Unlistening!"

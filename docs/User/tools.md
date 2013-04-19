@@ -10,30 +10,18 @@ Import
 ------
 The import tool is responsible for creating a metadata database, and importing links into it.  It does not create the whole corpus directory structure (this is handled by the download server), but will construct requisite SQL tables for handling sampling.
 
-### Importing links
+### Usage 
 
 The import script may be run simply by running
 
-    ./import DBFILE LINKFILE [create]
-
+    ./lwac import config.yml LINKFILE
+    
 where:
 
- * `DBFILE` is the filepath of an SQLite3 database, or the path you wish to create if one does not exist yet;
  * `LINKFILE` is a one-link-per-line list of hyperlinks to use for this sample (assumed UTF-8), and;
- * `create` is the word 'create' if you wish to create a database from scratch.  If this argument is given, the import tool will look in `./resources/schemata/` and execute ALL the SQL files it finds in order to construct the database (further documentation is given in the schemata directory).
 
-### Progress and Performance
-Whilst importing links, the tool will output its progress per 1023 links (see 'Advanced Configuration' below).  Unlike other tools in the distribution, the import script does not use the same data access or log libraries and its output is somewhat minimal.
-
-### Advanced Configuration
-The import tool can be configured by editing the constants within the file itself.  These run to:
-
- * `SQLITE_PRAGMA`---A list of SQLite3 pragma statements to be run.  The defaults have been chosen to maximise performance and offer a speed up of many orders of magnitude over the default configuration, though it is possible to further tune them with a little effort.
- * `FIX_ENCODING`---Set this to false to make the import script ignore any encoding glitches in the input files.  Generally, it's wise to keep this feature set to true to avoid any nasty surprises later (though all tools in LWAC can handle broken UTF-8 strings with various levels of capacity)
- * `NOTIFY_PROGRESS`---Print the progress every N links.  By default this is set to 1023, so that all significant figures update, which for some reason I always think looks neater :-)
- * `SCHEMA_PATH`---A string representing where to find the list of schemata to construct a new database.  Default is "./resources/schemata".
- * `SCHEMATA`---A list of schema files to apply when creating a new database.  The presumption is that one table is created per schema file, and this list is built automatically if `SCHEMA_PATH` above is set correctly by listing all files that end in `.sql`.  Note that SQLite3 does not support running multiple table creations in a single transaction.
-
+### Configuration
+The import tool has a much shorter [config file](import_config.html) than others, and relies heavily on the server config to manage its storage system.
 
 Download
 --------
@@ -60,7 +48,7 @@ Each server supports an unlimited number of clients, however, their access to th
 #### Usage
 To run the server, simply provide it with a path to a config file:
 
-    ./server config/server.yml
+    ./lwac server config/server.yml
 
 
 #### Configuration
@@ -77,7 +65,7 @@ For more detailed configuration options, see the detailed writeup on the [server
 #### Usage
 To run the client, simply provide it with a path to a relevant config file:
 
-    ./client config/client.yml
+    ./lwac client config/client.yml
 
 #### Configuration
 The client is also managed exclusively by its config file.  See more detail on the [client configuration page](client_config.html).
@@ -91,7 +79,7 @@ The export tool is used to reformat information from the metadata and backing st
 ### Usage
 To run the export tool, simply provide it with a path pointing to a relevant config file:
 
-    ./export config/export.yml
+    ./lwac export config/export.yml
 
 It's worth noting that the export tool uses the server configuration file for corpus access, and thus will need to be able to access that also.
 

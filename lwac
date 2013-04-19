@@ -1,0 +1,121 @@
+#!/usr/bin/env ruby
+
+# -----------------------------------------------------------------------------
+# Load prerequisites
+Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
+
+# -----------------------------------------------------------------------------
+# Prevent people using this as a library
+if __FILE__ != $0 then
+  $stderr.puts "This script is intended to be run directly."
+  exit(1)
+end
+
+# -----------------------------------------------------------------------------
+# Load the launch tools and check gem prerequisites
+require './lib/shared/launch_tools.rb'
+check_gems('marilyn-rpc', 'eventmachine')
+
+# Load config using launch_tools
+tool, config = load_config 
+
+# Announce version
+Identity::announce_version
+
+# Summarise logs
+$log.summarise_logging
+
+# -----------------------------------------------------------------------------
+# do stuff
+
+case tool
+  # ---------------------------------------------------------------------------
+  #  Server
+  # ---------------------------------------------------------------------------
+  when :server
+    require './lib/server/download_server.rb'
+      
+    # Fire up the server
+    $server = DownloadServer.new(config)
+
+    # Ensure we exit cleanly after EM's done
+    $log.info "Registering exit handler for download server."
+    at_exit{ $server.close }
+
+    # Start eventmachine
+    $log.info "Listening for connections connections on:"
+    EM.run{
+      config[:server][:interfaces].each{ |iface|
+        ip, port = iface[:interface], iface[:port]
+
+        $log.info "  #{ip}:#{port}"
+        EM.start_server(ip, port, MarilynRPC::Server)
+        # ALSO POSSIBLE:
+        #  EM.start_unix_domain_server("tmp.socket", MarilynRPC::Server)
+      }
+    }
+
+
+
+  # ---------------------------------------------------------------------------
+  #  Client
+  # ---------------------------------------------------------------------------
+  when :client
+    require './lib/client/download_client.rb'
+
+    # Start the client going
+    dc = DownloadClient.new(config)
+    # download
+    dc.work
+
+
+
+  # ---------------------------------------------------------------------------
+  #  Import Tool 
+  # ---------------------------------------------------------------------------
+  when :import
+    file = nil
+    if ARGV[2] and File.exist?(ARGV[2]) and File.readable?(ARGV[2]) then
+      file = ARGV[2]
+    else
+      $log.fatal "Cannot read file to import: #{file}" if ARGV[2]
+      $log.fatal "Please provide a file to import!" if not ARGV[2]
+      exit(1)
+    end
+
+
+    require './lib/import/import.rb'
+
+    begin
+      im = Importer.new(config)
+      im.import(file)
+    rescue StandardError => e
+      $log.fatal "#{e.to_s}"
+      $log.debug "#{e.backtrace.join("\n")}"
+    end
+
+
+
+  # ---------------------------------------------------------------------------
+  #  Export Tool
+  # ---------------------------------------------------------------------------
+  when :export
+    require './lib/export/export.rb'
+
+    # Construct the exporter object and load stuff from disk
+    ex = Exporter.new(config)
+
+    # Dump stuff back to disk
+    ex.export
+
+
+  # ---------------------------------------------------------------------------
+  #  Else...
+  # ---------------------------------------------------------------------------
+  else
+    $log.error "Unknown tool: #{tool}."
+    $log.error "The code should also never reach this statement unless something is wrong."
+    exit(1)
+end
+
+

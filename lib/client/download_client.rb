@@ -1,20 +1,20 @@
-#!/usr/bin/env ruby
-require 'rubygems'
-if __FILE__ != $0 then
-  $stderr.puts "This script is intended to be run directly."
-  exit(1)
-end
-require './lib/shared/launch_tools.rb'
+# FIXME: this is an inelegant way of managing load paths
+$:.unshift( File.join( File.dirname(__FILE__), "../", "shared" ) )
+$:.unshift( File.dirname(__FILE__) )
 
-check_gems('marilyn-rpc', 'curb', 'eventmachine')
+require 'download_worker'
+require 'file_cache'
+require 'storage'
 
-Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
-Dir.glob(File.join(File.dirname(__FILE__), "lib", "client", "*.rb")).each{|x| require x}
+require 'multilog'
+require 'identity'
+
 
 require 'marilyn-rpc'
 require 'eventmachine'
 require 'yaml'
 require 'timeout'
+require 'digest/md5'
 
 
 class DownloadClient
@@ -276,20 +276,4 @@ private
 end
 
 
-
-
-# -----------------------------------------------------------------------------
-  
-# Load config and logs using launch_tools
-config = load_config 
-Identity::announce_version
-$log.summarise_logging
-
-# Start the client going
-dc = DownloadClient.new(config)
-
-# download
-dc.work
-
-# Kill storage if used
 

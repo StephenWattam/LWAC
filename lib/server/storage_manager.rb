@@ -1,11 +1,12 @@
-require File.join(File.dirname(__FILE__), "../shared/data_types.rb")
-require File.join(File.dirname(__FILE__), "../shared/multilog.rb")
+# FIXME: this is an inelegant way of managing load paths
+$:.unshift( File.join( File.dirname(__FILE__), "../", "server" ) )
+$:.unshift( File.join( File.dirname(__FILE__), "../", "shared" ) )
+$:.unshift( File.dirname(__FILE__) )
 
-# for version checks
-require File.join(File.dirname(__FILE__), "../shared/identity.rb")
-
-require File.join(File.dirname(__FILE__), "../server/serialiser.rb")
-
+require 'serialiser'
+require 'identity'
+require 'multilog'
+require 'data_types'
 
 require 'yaml'
 require 'sqlite3'
@@ -163,6 +164,11 @@ class DatabaseStorageManager < DatabaseConnection
     @config             = config
     results_as_hash     = true
 
+  end
+
+  # Insert a link
+  def insert_link(uri)
+    insert(@config[:table], {"uri" => uri})
   end
 
   # Retrieve a list of links from the db
@@ -335,7 +341,7 @@ class StorageManager
     # Load all links and work out which files should
     # actually be in the dir
     all_link_ids = read_link_ids
-    sampled = all_link_ids - sample.pending # FIXME
+    sampled = all_link_ids.delete_if{|x| x < sample.last_dp_id} - sample.pending # FIXME
 
     # Now check they all exist
     if(verify_datapoints) then
