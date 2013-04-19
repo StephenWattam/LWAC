@@ -334,7 +334,7 @@ class StorageManager
     # Check the file exists
     begin
       sample = read_sample(sample_id)
-    rescue Exception => e
+    rescue StandardError => e
       raise "Error loading sample metadata: #{e.to_s}"
     end
 

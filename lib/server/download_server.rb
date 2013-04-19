@@ -211,7 +211,7 @@ class DownloadService < MarilynRPC::Service
       #$log.info "Received test from #{client_id}"
       #$log.info "Payload: #{payload.to_s}"
     #}
-  #rescue Exception => e
+  #rescue StandardError => e
     #$log.error "Exception: #{e}"
     #$log.debug e.backtrace.join("\n")
   #end
@@ -224,7 +224,7 @@ class DownloadService < MarilynRPC::Service
     }
   rescue SignalException => e
     raise e
-  rescue Exception => e
+  rescue StandardError => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
     return []
@@ -238,7 +238,7 @@ class DownloadService < MarilynRPC::Service
     }
   rescue SignalException => e
     raise e
-  rescue Exception => e
+  rescue StandardError => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
     return nil
@@ -252,7 +252,7 @@ class DownloadService < MarilynRPC::Service
     }
   rescue SignalException => e
     raise e
-  rescue Exception => e
+  rescue StandardError => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
     return nil

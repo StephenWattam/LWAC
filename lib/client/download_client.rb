@@ -200,9 +200,7 @@ private
         }
 
       # On error
-      rescue SignalException => e
-        raise e
-      rescue Exception => e
+      rescue StandardError => e
         
         # Simply quit if we have been told to shut down
         return if @shutdown
@@ -234,9 +232,7 @@ private
     response = nil
     begin
       response = yield(download_service)
-    rescue SignalException => e
-      raise e
-    rescue Exception => e
+    rescue StandardError => e
       $log.error "Exception: #{e}"
       $log.debug e.backtrace.join("\n")
     end

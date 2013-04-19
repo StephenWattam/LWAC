@@ -197,7 +197,7 @@ private
 
         # Pop in the "valid" list.
         @available_samples << sample
-      rescue Exception => e
+      rescue StandardError => e
         $log.warn "Problem reading sample #{sample_id}: #{e.to_s}"
         $log.debug e.backtrace.join("\n")
       end

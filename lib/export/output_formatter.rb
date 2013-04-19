@@ -41,7 +41,7 @@ def compile_filters( filters )
         $log.debug "Building expression for filter (#{f})..."
         begin
           v[:lambda] = eval("lambda{|data|" + v[:expr] + "}")
-        rescue Exception => e
+        rescue StandardError => e
           $log.fatal "Error building expression for field: #{f}."
           $log.fatal "Please review your configuration."
           $log.fatal "The exact error was: \n#{e}"
@@ -82,7 +82,7 @@ def filter( data, filters )
   $log.debug "Accepting."
   return true
 
-rescue Exception => e
+rescue StandardError => e
   $log.fatal "Error filtering data: #{e}"
   $log.fatal "This is probably a bug in your filtering expressions."
   $log.fatal "Current state: filtering #{f}." if defined? f
@@ -136,7 +136,7 @@ def compile_format_procedures( format )
         elsif v[:var] then
           v[:lambda] = eval("lambda{|data| return data." + v[:var] + "}")
         end
-      rescue Exception => e
+      rescue StandardError => e
         $log.fatal "Error building expression for field: #{f}."
         $log.fatal "Please review your configuration."
         $log.fatal "The exact error was: \n#{e}"
@@ -199,7 +199,7 @@ def produce_output_line( data, format )
 
   return line 
 
-rescue Exception => e
+rescue StandardError => e
   $log.fatal "Error producing output: #{e}"
   $log.fatal "This is probably a bug in your formatting expressions."
   $log.fatal "Currently formatting '#{current}'." if current

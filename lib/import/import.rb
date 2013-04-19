@@ -57,7 +57,7 @@ class Importer
       close
       print "\n" if $stdout.tty?
       $log.info "\nAdded #{count} link[s]."
-    rescue Exception => e
+    rescue StandardError => e
       $log.fatal "#{e}"
       $log.debug "#{e.backtrace.join("\n")}"
     end
