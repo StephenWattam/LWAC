@@ -91,6 +91,11 @@ class Sample
     @sample_start_time  = Time.now
   end
 
+  def close_sample
+    @permit_sampling    = false
+    @sample_end_time    = Time.now
+  end
+
   # Has this sample got any links pending?
   def complete?
     @progress == @size

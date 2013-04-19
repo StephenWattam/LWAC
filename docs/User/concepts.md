@@ -18,7 +18,7 @@ Theoretically, this forms three levels at which we may access the data:
  2. Sample level, describing one attempt to download links (a conventional cross-sectional sample containing many datapoints);
  3. Datapoint level, describing one attempt to download a single link.
 
-Simply, a server has many samples, each of which has many data points.  Samples are temporally homogenous to the greatest extent possible, and links are homogenous in URI-space.  Since the time taken to download each sample applies some bias, links are downloaded in a random order and as intensively as possible.
+Simply, a server has many samples, each of which has many data points.  Samples are temporally homogenous to the greatest extent possible, and datapoints refer to the same URI (for their id).  Since the cumulative time taken to download each sample applies some drift, links are downloaded in a random order and as intensively as possible.
 
 The corpus, as stored on disk, consists of two types of storage:
 

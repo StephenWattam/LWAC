@@ -341,7 +341,7 @@ class StorageManager
     # Load all links and work out which files should
     # actually be in the dir
     all_link_ids = read_link_ids
-    sampled = all_link_ids.delete_if{|x| x < sample.last_dp_id} - sample.pending # FIXME
+    sampled = all_link_ids.delete_if{|x| x > sample.last_dp_id} - sample.pending # FIXME
 
     # Now check they all exist
     if(verify_datapoints) then

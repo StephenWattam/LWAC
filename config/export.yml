@@ -43,7 +43,6 @@
     :datapoint_dir: datapoint.dir
     :datapoint_path: datapoint.path
     :last_id: sample.last_contiguous_id
-    :pending: sample.pending_links
     #:l2: datapoint.id
 :logging:                             # Log output settings
   :progname: Export                     # Name of the app in the logs

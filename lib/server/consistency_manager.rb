@@ -206,7 +206,7 @@ private
   def close_sample
     # Write sample end time
     @state.last_sample_duration             = (Time.now - @state.current_sample.sample_start_time).round
-    @state.current_sample.sample_end_time   = Time.now
+    @state.current_sample.close_sample                     
 
     $log.info "*** Closing sample #{@state.current_sample}"
     $log.info "Sample duration: #{@state.last_sample_duration.round}s, size: #{(@state.current_sample.approx_filesize / 1024 / 1024).round(2)}MB"

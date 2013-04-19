@@ -125,7 +125,7 @@ def compile_format_procedures( format )
     criteria = 0
     %w{val var expr}.each{|method| criteria += 1 if v[method.to_sym] != nil}
     raise "No extraction method given for field '#{f}'."          if(criteria == 0)
-    raise "Multiple extraction methods given for field '#{f}' (#{v.keys.join(", ")})."   if(criteria > 1)
+    raise "Multiple extraction methods given for field '#{f}' (#{v.keys.join(", ")})." if(criteria > 1)
 
     # Construct lambdas for active fields
     if v[:var] or v[:expr] then

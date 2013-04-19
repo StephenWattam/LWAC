@@ -49,7 +49,7 @@ class Resource
       if val.is_a? Resource
         str += "#{val.describe(trunc, indent + 2, true)}" 
       else
-        str += "#{val.to_s.truncate(trunc[1])}"
+        str += "#{val.to_s.truncate(trunc[1]).gsub("\n", '\n').gsub("\r", '\r').gsub("\t", '\t')}"
       end
       str += "\n"
     }

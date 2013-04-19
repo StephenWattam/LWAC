@@ -29,8 +29,6 @@ The hierachy is currently as below:
      * `.open` --- Boolean.  Is the sample open?
      * `.size` --- How many links are covered by the sample?
      * `.duration` --- How long did the sample take, in seconds? (`end_time_s` - `start_time_s`)
-     * `.num_pending_links` --- How many links are still waiting to be completed?
-     * `.pending_links` --- A list of links still waiting to be downloaded.
      * `.last_contiguous_id` --- The last id read from the database.  Links yet to be completed equal (sample.size - last_contiguous_id) union (pending_links)
      * `.size_on_disk` --- The approximate filesize on disk, in bytes, of all data in this sample
      * `.dir` --- The directory for that sample, relative to the current working directory
@@ -58,6 +56,149 @@ The hierachy is currently as below:
        * `.dry_run` --- Boolean.  `true` if this datapoint was sampled as part of a dry run (no data will have been transferred to/from the web)
        * `.mime_allowed` --- Boolean. `false` if the MIME type policy on the server caused this document's body to be discarded, or `true` otherwise
 
+
+Calling the `.describe` method on any resource will output a tree containing its data, such as the one below, generated from a sample corpus:
+
+    Data{
+      server           : {
+        links            : [1, 2, 3]                                         
+        complete_sampl...: 2                                                 
+        complete_samples : [0, 1]                                            
+        next_sample_date : 1366381980                                        
+        current_sample_id: 1                                                 
+        config           : {
+          storage          : {
+            root             : corpus                                            
+            state_file       : state                                             
+            sample_subdir    : samples                                           
+            sample_filename  : sample                                            
+            files_per_dir    : 1000                                              
+            database         : {
+              filename         : corpus/links.db                                   
+              table            : links                                             
+              transaction_limit: 100                                               
+              pragma           : {
+                locking_mode     : EXCLUSIVE                                         
+                cache_size       : 20000                                             
+                synchronous      : 0                                                 
+                temp_store       : 2                                                 
+              }
+              fields           : {
+                id               : id                                                
+                uri              : uri                                               
+              }
+            }
+          }
+          sampling_policy  : {
+            sample_limit     : 2                                                 
+            sample_time      : 60                                                
+            sample_alignment : 0                                                 
+          }
+          client_policy    : {
+            dry_run          : false                                             
+            fix_encoding     : true                                              
+            target_encoding  : UTF-8                                             
+            encoding_options : {
+              invalid          : replace                                           
+              undef            : replace                                           
+              universal_newline: true                                              
+            }
+            max_body_size    : 20971520                                          
+            mimes            : {
+              policy           : whitelist                                         
+              ignore_case      : true                                              
+              list             : ["^text\\/?.*$"]                                  
+            }
+            curl_workers     : {
+              max_redirects    : 5                                                 
+              useragent        : "Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US...
+              enable_cookies   : true                                              
+              verbose          : false                                             
+              follow_location  : true                                              
+              timeout          : 60                                                
+              connect_timeout  : 10                                                
+              dns_cache_timeout: 10                                                
+              ftp_response_t...: 10                                                
+            }
+          }
+          client_management: {
+            time_per_link    : 5                                                 
+            empty_client_b...: 60                                                
+            delay_overesti...: 10                                                
+          }
+          server           : {
+            interfaces       : [{:interface=>"localhost", :port=>27400}]         
+            service_name     : downloader                                        
+          }
+          logging          : {
+            progname         : Server                                            
+            logs             : {
+              default          : {
+                dev              : STDOUT                                            
+                level            : info                                              
+              }
+              file_log         : {
+                dev              : logs/server.log                                   
+                level            : info                                              
+              }
+            }
+          }
+        }
+        version          : 0.2.0b                                            
+      }
+      sample           : {
+        id               : 1                                                 
+        start_time       : 2013-04-19 15:33:10 +0100                         
+        end_time         : 2013-04-19 15:33:11 +0100                         
+        complete         : true                                              
+        open             : false                                             
+        size             : 3                                                 
+        duration         : 1.406624844                                       
+        start_time_s     : 1366381990                                        
+        end_time_s       : 1366381991                                        
+        size_on_disk     : 214259.0                                          
+        last_contiguou...: 3                                                 
+        dir              : corpus/samples/1                                  
+        path             : corpus/samples/1/sample                           
+      }
+      datapoint        : {
+        id               : 3                                                 
+        uri              : http://google.co.uk                               
+        dir              : corpus/samples/1/0                                
+        path             : corpus/samples/1/0/3                              
+        client_id        : LOCAL3_7ba2f8cd03d79efbbaa4b1c561759c6e           
+        error            :                                                   
+        headers          : {
+          Location         : http://www.google.co.uk/                          
+          Content_Type     : text/html; charset=UTF-8                          
+          Date             : Fri, 19 Apr 2013 14:33:10 GMT                     
+          Expires          : -1                                                
+          Cache_Control    : private, max-age=0                                
+          Server           : gws                                               
+          Content_Length   : 221                                               
+          X_XSS_Protection : 1; mode=block                                     
+          X_Frame_Options  : SAMEORIGIN                                        
+          Set_Cookie       : NID=67=B7dOglOF9YR3BvNje7Xgy_FAHcHIgJMW3HGm9HYI...
+          P3P              : CP="This is not a P3P policy! See http://www.go...
+          Transfer_Encoding: chunked                                           
+        }
+        head             : HTTP/1.1 301 Moved Permanently\nLocation: http:/...
+        body             : <!doctype html><html itemscope="itemscope" item...
+        response         : {
+          round_trip_time  : 0.313531                                          
+          redirect_time    : 0.219863                                          
+          dns_lookup_time  : 0.00129                                           
+          effective_uri    : http://www.google.co.uk/                          
+          code             : 200                                               
+          download_speed   : 163125.0                                          
+          downloaded_bytes : 51145.0                                           
+          encoding         : text/html; charset=UTF-8                          
+          truncated        : false                                             
+          mime_allowed     : true                                              
+          dry_run          : false                                             
+        }
+      }
+    }
 
 
 Config
@@ -148,3 +289,4 @@ This example outputs two fields.  The former, `okay_resp`, outputs 'true' if the
 Logging
 -------
 The logging system is the same for client, server, and export tools and shares a configuration with them.  For details, see [configuring logging](log_config.html)
+

@@ -12,12 +12,16 @@ class Exporter
 
   def initialize(config)
     @config = config
+
+    prepare_filters
+    prepare_formatters
     
     load_server_config
 
     load_storage_resources
 
     validate_samples
+
 
     summarise
   end
@@ -51,6 +55,7 @@ class Exporter
       
       # -----------------------------------------------------------------------------
       # Construct the server (static) resource
+      $log.debug "Constructing server resource..."
       server = {:links                  => @storage.read_link_ids.to_a,
                 :complete_sample_count  => @available_samples.length,
                 :complete_samples       => @available_samples.map{|as| as.id},
@@ -74,6 +79,7 @@ class Exporter
         # ...continue to sample at a lower level
         # -----------------------------------------------------------------------------
         # One level deep, loop through samples and construct their resource
+        $log.debug "Constructing sample resources..."
         @available_samples.each{|as|
           sample = {:id                   => as.id,
                     :start_time           => as.sample_start_time,
@@ -84,15 +90,17 @@ class Exporter
                     :duration             => (as.sample_end_time && as.sample_start_time) ? as.sample_end_time - as.sample_start_time : 0,
                     :start_time_s         => as.sample_start_time.to_i,
                     :end_time_s           => as.sample_end_time.to_i,
-                    :num_pending_links    => as.pending.length,
-                    :pending_links        => @storage.read_link_ids.to_a.delete_if{|id| (not as.pending.to_a.include?(id)) or (id > as.last_dp_id) },
+                    # :num_pending_links    => as.pending.length,
+                    # Either form takes way too long to compute on large servers
+                    # :pending_links        => data.server.links - (data.server.links.clone.delete_if{|x| x > as.last_dp_id} - as.pending.to_a),
+                    # :pending_links        => data.server.links.clone.to_a.delete_if{|id| (not as.pending.to_a.include?(id)) or (id > as.last_dp_id) },
                     :size_on_disk         => as.approx_filesize,
                     :last_contiguous_id   => as.last_dp_id,
                     :dir                  => @storage.get_sample_filepath(as.id),
                     :path                 => File.join(@storage.get_sample_filepath(as.id), @server_config[:storage][:sample_filename]) 
                    }
           data.sample = Resource.new("sample", sample)
-          #puts sample.describe
+          # puts data.describe
 
 
 
@@ -108,6 +116,7 @@ class Exporter
               # ...continue and build more info
               # -----------------------------------------------------------------------------
               # Two levels deep, loop through datapoints and construct their resources.
+              $log.debug "Constructing datapoint resources..."
               data.server.links.each{|link_id|
                 # Load from disk
                 dp = @storage.read_datapoint( link_id, as )
@@ -125,7 +134,7 @@ class Exporter
                             }
               
                 data.datapoint = Resource.new("datapoint", datapoint)
-                #puts data.describe
+                puts data.describe
 
 
 
@@ -180,13 +189,15 @@ private
     # Print handy messages to people
     $log.warn "No samples have completed yet, this is a new deployment." if(@state.last_sample_id == -1)
     $log.info "Current sample: #{@state.current_sample}."
-    $log.info "Sample is open, the latest sample we can export in full is #{@state.last_sample_id}" 
+
+    cs = @state.current_sample
+    $log.info "The latest sample we can export in full is #{(cs.open? or not cs.complete?) ? @state.last_sample_id : @state.current_sample.id}" 
   end
 
   # Attempt to account for samples
   def validate_samples
     @available_samples = []
-    available_sample_ids  = (0..(@state.last_sample_id)).to_a
+    available_sample_ids  = (0..(@state.current_sample.id)).to_a
     available_sample_ids.each{|sample_id|
       begin
         # Ensure the sample has all its files
@@ -194,6 +205,10 @@ private
 
         # Load the sample metadata
         sample = @storage.read_sample(sample_id)
+
+        # check it's closed and complete
+        raise "sample is open" if sample.open?
+        raise "sample is incomplete" if not sample.complete?
 
         # Pop in the "valid" list.
         @available_samples << sample
@@ -208,12 +223,12 @@ private
   end
 
   # Compile formatting procedures
-  def compile_formatters
+  def prepare_formatters
     compile_format_procedures( @config[:output][:format] )
   end
 
   # Check and compile filters
-  def compile_filters
+  def prepare_filters
     @config[:output][:filters] = {} if not @config[:output][:filters]
     compile_filters( @config[:output][:filters] )
   end
