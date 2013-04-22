@@ -1,12 +1,10 @@
-# FIXME: this is an inelegant way of managing load paths
-$:.unshift( File.join( File.dirname(__FILE__), "../", "server" ) )
-$:.unshift( File.join( File.dirname(__FILE__), "../", "shared" ) )
-$:.unshift( File.dirname(__FILE__) )
 
-require 'storage_manager'
-require 'output_formatter'
-require 'resources'
+require 'lwac/server/storage_manager'
+require 'lwac/export/output_formatter'
+require 'lwac/export/resources'
 require 'csv'
+
+module LWAC
 
 class Exporter
 
@@ -249,3 +247,4 @@ private
 
 end
 
+end

@@ -1,24 +1,12 @@
-# Contains version and identification information for people to use when reporting
-
-
-module Identity
-
-  # Overall LWAC version, as in the git tags
-  VERSION = "0.2.0b"
+# Contains methods for reporting and testing versioning.
+#
+# Actual version numbers are held in lib/lwac.rb
+module LWAC::Identity
 
   # Versions that may be loaded by the storage manager
   # If it ain't in this list, it ain't coming off disk into RAM.
   COMPATIBLE_CORPUS_VERSIONS  = [VERSION]
   COMPATIBLE_NETWORK_VERSIONS = [VERSION]
-
-  # Date of last significant edit
-  DATE = "16-04-13"
-
-  # Authors
-  AUTHORS = [
-              {:name => "Stephen Wattam", :contact => "http://stephenwattam.com"},
-             #{:name => "", :contact => ""}  # Add yourself here if you contribute to LWAC
-            ]
 
   # Print the author string?
   POMPOUS_MODE = true 
@@ -50,7 +38,7 @@ module Identity
       msgs.each{|m| puts m }
     end
   end
-
 end
+
 
 

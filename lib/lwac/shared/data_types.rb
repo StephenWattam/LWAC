@@ -1,6 +1,7 @@
 # Sets are used to hold links in an unordered, non-duplicated fashion.
 require 'set'
 
+module LWAC
 
 # -----------------------------------------------------------------------------
 # Holds a datapoint, which is the return value from querying a link
@@ -139,4 +140,6 @@ class ServerState
     @next_sample_due            = next_sample_due       || Time.now
     @last_sample_duration       = last_sample_duration  || 1
   end
+end
+
 end

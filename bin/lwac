@@ -1,10 +1,6 @@
 #!/usr/bin/env ruby
 
 # -----------------------------------------------------------------------------
-# Load prerequisites
-Dir.glob(File.join(File.dirname(__FILE__), "lib", "shared", "*.rb")).each{|x| require x}
-
-# -----------------------------------------------------------------------------
 # Prevent people using this as a library
 if __FILE__ != $0 then
   $stderr.puts "This script is intended to be run directly."
@@ -13,8 +9,7 @@ end
 
 # -----------------------------------------------------------------------------
 # Load the launch tools and check gem prerequisites
-require './lib/shared/launch_tools.rb'
-check_gems('marilyn-rpc', 'eventmachine')
+require 'lwac/shared/launch_tools'
 
 # Load config using launch_tools
 tool, config = load_config 
@@ -33,7 +28,7 @@ case tool
   #  Server
   # ---------------------------------------------------------------------------
   when :server
-    require './lib/server/download_server.rb'
+    require 'lwac/server'
       
     # Fire up the server
     $server = DownloadServer.new(config)
@@ -61,7 +56,7 @@ case tool
   #  Client
   # ---------------------------------------------------------------------------
   when :client
-    require './lib/client/download_client.rb'
+    require 'lwac/client'
 
     # Start the client going
     dc = DownloadClient.new(config)
@@ -85,7 +80,7 @@ case tool
     end
 
 
-    require './lib/import/import.rb'
+    require 'lwac/import'
 
     begin
       im = Importer.new(config)
@@ -101,7 +96,7 @@ case tool
   #  Export Tool
   # ---------------------------------------------------------------------------
   when :export
-    require './lib/export/export.rb'
+    require 'lwac/export'
 
     # Construct the exporter object and load stuff from disk
     ex = Exporter.new(config)
