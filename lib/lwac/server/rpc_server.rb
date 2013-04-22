@@ -21,7 +21,11 @@ module LWAC
       @s = TCPServer.open(@port)
 
       loop{
-        handle_client(@s.accept)
+
+        begin
+          handle_client(@s.accept)
+        rescue StandardError => e
+        end
       }
     end
 

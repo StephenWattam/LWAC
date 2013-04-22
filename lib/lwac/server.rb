@@ -34,16 +34,16 @@ module LWAC
       @dispatched[client_id]  = {} if not @dispatched[client_id]  
 
       # If the client has already been allocated links
-      if(@dispatched[client_id].values.length > 0)
-        $log.debug "Client #{client_id} already has some links checked out.  Will re-issue these instead."
-        links = @dispatched[client_id].values
-      else
+      # if(@dispatched[client_id].values.length > 0)
+      #   $log.debug "Client #{client_id} already has some links checked out.  Will re-issue these instead."
+      #   links = @dispatched[client_id].values
+      # else
         # Else, check out some new ones
         links = @cm.check_out(request)
         links.each{|l|
           @dispatched[client_id][l.id] = l
         }
-      end
+      # end
 
       # If we found no links
       if(links.length == 0)

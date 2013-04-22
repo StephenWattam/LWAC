@@ -30,11 +30,14 @@ module LWAC
       @rpc_client = RPCClient.new( @config[:server][:address], @config[:server][:port], :marshal)  # TODO: more serialisation formatus
 
       # Current working links and download policy
-      @policy       = {}
       @links        = []
+      @link_mutex   = Mutex.new
 
-      $log.info "Creating cache #{(@config[:client][:cache_file] == nil) ? "in RAM" : "at #{@config[:client][:cache_file]}"}"
-      @datapoints   = Store.new(@config[:client][:cache_file])
+
+      # Create worker pool
+      $log.info "Creating worker pool and starting work..."
+      @pool = WorkerPool.new(@config[:client][:simultaneous_workers], new_pool_cache, @uuid)
+      @pool_thread = Thread.new(self){ |dispatcher| maintain_worker_pool(dispatcher) }
 
       # Should we really care about being able to contact the server?
       @shutdown     = false
@@ -47,16 +50,27 @@ module LWAC
     #
     # Raise SIGINT to stop.
     def work
-      loop do 
-        # Get a batch from the server
-        acquire_batch
+      loop{ 
 
-        # Process
-        process_links 
 
-        # Send completed points back to the server
-        send_batch
-      end
+        # TODO: major thread safety issue with links refs.
+        $log.info "*** [#{@links.length} remaining] #{(@pool.cache_size.to_f / 1024.0 / 1024.0 ).round(2)}MB"
+
+        # Delay to stop us eating CPU when spinning
+        sleep(0.5)
+      
+        # Run out of links
+        if @links.length == 0 then
+          acquire_batch
+        end
+
+        # Downloaded enough data already
+        if (@pool.cache_size.to_f / 1024.0 / 1024.0) > @config[:client][:check_in_size] then
+          # Send completed points back to the server
+          send_batch(@pool.get_datapoints( new_pool_cache ) )
+        end
+
+      }
 
     rescue SignalException => se
       $log.fatal "Caught signal!"
@@ -67,22 +81,25 @@ module LWAC
       return
     end
 
+    # Returns an available link for one of the workers if requested
+    # or nil if we're fresh out.
+    def get_link
+      l = nil
+      @link_mutex.synchronize{
+        l = @links[0]
+        @links.delete_at(0)
+      }
+      return l
+    end
 
 
   private
 
     # Actually download the links
-    # This starts up a worker pool, and waits until they are done.
-    def process_links
-      $log.info "Creating worker pool and starting work..."
-      $log.warn "Server requested a dry run.  No actual work will be done" if @config[:client][:dry_run]
-      pool = WorkerPool.new(@config[:client][:simultaneous_workers], @policy, @datapoints, @uuid, @links)
-      pool.init_workers
-      pool.work
-      @datapoints = pool.wait_and_get_datapoints
-      $log.info "Downloaded.  Checking in #{@datapoints.length} completed datapoint[s]..."
-      @datapoints.each_key{|link_id| @links.delete(link_id) }
-      pool.summarise
+    # This starts up a worker pool, and waits until they're done.
+    def maintain_worker_pool(dispatcher)
+      @pool.init_workers
+      @pool.work(dispatcher)
     rescue SignalException => se
       $log.fatal "Caught signal!"
 
@@ -111,7 +128,14 @@ module LWAC
           $log.info "Waiting for #{ret}s until #{Time.now + ret} at the server's request."
           sleep([ret, @config[:network][:maximum_reconnect_time]].min)
         elsif(ret.class == Array and ret.length == 2)
-          @policy, @links = ret
+
+          # Load the worker config into the list
+          policy, links = ret
+          @link_mutex.synchronize{
+            links.each{ |l|
+              @links << {:link => l, :config => policy}
+            }
+          }
           $log.info "Received #{@links.length}/#{@config[:client][:batch_capacity]} links from server."
           return
         else
@@ -124,19 +148,19 @@ module LWAC
 
     # Send the batch of datapoints we have currently.
     # Sends in "chunks" of :check_in_rate 
-    def send_batch
-      while(@datapoints.length > 0) do
+    def send_batch(datapoints)
+      while(datapoints.length > 0) do
         @pending = []
 
         # Take them out of the pstore up to a given size limit, then send that chunk
         pending_size = 0.0
         $log.debug "Counting data for upload..."
-        while(@datapoints.length > 0 and pending_size < @config[:client][:check_in_size]) do
-          key = @datapoints.keys[0]
-          dp = @datapoints[key]
+        while(datapoints.length > 0) do # and pending_size < @config[:client][:check_in_size]) do
+          key = datapoints.keys[0]
+          dp = datapoints[key]
           pending_size += dp.response_properties[:downloaded_bytes].to_f / 1024.0 / 1024.0 
           @pending << dp
-          @datapoints.delete_from_index(key)
+          datapoints.delete_from_index(key)
         end
 
         # send datapoints
@@ -148,22 +172,18 @@ module LWAC
       end
 
       # Here datapoints.length == 0, so wipe the cache
-      @datapoints.delete_all
+      datapoints.delete_all
     end
 
     # Cancel the batch of links we currently have checked out.
     # This atomically aborts these links and frees them up for other clients.
     def cancel_batch
-      return if(@links.class == Fixnum) # just in case we bail whilst waiting
-
-
-      if not @datapoints.empty? 
-        $log.info "Deleting local datapoints from cache..."
-        @datapoints.each_key{|k|
-          @links << k
-        }
-        @datapoints.close
-      end
+      # return if(@links.class == Fixnum) # just in case we bail whilst waiting
+    
+      # Wait for the worker pool to die
+      $log.info "Killing worker threads..."
+      @pool.close
+      @pool.wait
 
       if @links.empty?
         $log.info "No links to cancel." 
@@ -242,6 +262,14 @@ module LWAC
 
       return response
     end
+
+
+    # Get a new cache to replace the one in the pool
+    def new_pool_cache
+      $log.info "Creating cache #{(@config[:client][:cache_file] == nil) ? "in RAM" : "at #{@config[:client][:cache_file]}"}"
+      return Store.new(@config[:client][:cache_file])
+    end
+
 
     # Create this client's ID.  
     # Must be persistent across instances, but not across machines.

@@ -41,6 +41,9 @@ case tool
         $log.error "Error: #{e}"
         $log.debug "#{e.backtrace.join("\n")}"
       end
+
+      $log.info "Restarting server after a short delay..."
+      sleep(1)
     }
 
     # Ensure we exit cleanly after EM's done
