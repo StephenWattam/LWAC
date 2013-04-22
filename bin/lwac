@@ -24,27 +24,27 @@ case tool
   # ---------------------------------------------------------------------------
   when :server
     require 'lwac/server'
+    require 'lwac/server/rpc_server'
       
     # Fire up the server
-    $server = LWAC::DownloadServer.new(config)
+    server = LWAC::DownloadServer.new(config)
+    proxy = LWAC::DownloadService.new(server)
+    
+    # construct the rpc handler
+    rpc = LWAC::RPCServer.new( proxy, config[:server][:port], :marshal )   # TODO: more serialisation formats and interface option
 
-    # Ensure we exit cleanly after EM's done
-    $log.info "Registering exit handler for download server."
-    at_exit{ $server.close }
-
-    # Start eventmachine
-    $log.info "Listening for connections connections on:"
-    EM.run{
-      config[:server][:interfaces].each{ |iface|
-        ip, port = iface[:interface], iface[:port]
-
-        $log.info "  #{ip}:#{port}"
-        EM.start_server(ip, port, MarilynRPC::Server)
-        # ALSO POSSIBLE:
-        #  EM.start_unix_domain_server("tmp.socket", MarilynRPC::Server)
-      }
+    # listen
+    loop{
+      begin
+        rpc.listen
+      rescue StandardError => e
+        $log.error "Error: #{e}"
+        $log.debug "#{e.backtrace.join("\n")}"
+      end
     }
 
+    # Ensure we exit cleanly after EM's done
+    server.close
 
 
   # ---------------------------------------------------------------------------

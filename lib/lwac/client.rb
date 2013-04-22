@@ -6,9 +6,8 @@ require 'lwac/shared/multilog'
 require 'lwac/shared/identity'
 
 
-require 'marilyn-rpc'
-require 'eventmachine'
-require 'yaml'
+require 'lwac/client/rpc_client.rb'
+
 require 'timeout'
 require 'digest/md5'
 
@@ -27,6 +26,8 @@ module LWAC
       reset_reconnection_timer
       compute_reconnection_time
 
+      # Fire up el RPC client...
+      @rpc_client = RPCClient.new( @config[:server][:address], @config[:server][:port], :marshal)  # TODO: more serialisation formatus
 
       # Current working links and download policy
       @policy       = {}
@@ -133,7 +134,7 @@ module LWAC
         while(@datapoints.length > 0 and pending_size < @config[:client][:check_in_size]) do
           key = @datapoints.keys[0]
           dp = @datapoints[key]
-          pending_size += dp.response_properties[:downloaded_bytes].to_f / 1024.0 / 1024.0 #(Marshal.dump(dp).length.to_f / 1024.0 / 1024.0)
+          pending_size += dp.response_properties[:downloaded_bytes].to_f / 1024.0 / 1024.0 
           @pending << dp
           @datapoints.delete_from_index(key)
         end
@@ -180,8 +181,7 @@ module LWAC
     def connect(&block)
       $log.debug "Connecting to server #{@config[:server][:address]}:#{@config[:server][:port]}..."
 
-      client = nil
-      while(not client) do
+      while(not @rpc_client.connected?) do
         begin
 
           # Check reconnect timer and delay if it tells us to
@@ -193,7 +193,7 @@ module LWAC
 
           # Attempt to connect with the connect_timeout set
           Timeout::timeout(@config[:network][:connect_timeout]){
-            client = MarilynRPC::NativeClient.connect_tcp( @config[:server][:address], @config[:server][:port] )
+            @rpc_client.connect
           }
 
         # On error
@@ -222,22 +222,23 @@ module LWAC
       compute_reconnection_time
 
       # Start doing things!  Register as a client
-      download_service = client.for(:lwacdownloader)
       $log.debug "Done.  Yielding to perform actions."
 
       # Then yield the service to our caller
       response = nil
       begin
-        response = yield(download_service)
+        response = yield(@rpc_client)
       rescue StandardError => e
         $log.error "Error during operation: #{e}"
         $log.debug e.backtrace.join("\n")
       ensure
         # When done, disconnect
+        @rpc_client.disconnect
         $log.debug "Disconnected."
       end
 
-      client.disconnect
+      # success means...
+      reset_reconnection_timer
 
       return response
     end

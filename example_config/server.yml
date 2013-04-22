@@ -18,7 +18,7 @@
       :id: id                         # The ID field is called 'id' by default  
       :uri: uri                       # The field with the URIs in it is called 'uri' by default
 :sampling_policy:               # Defines sampling times
-  :sample_limit:  1               # Stop at the nth sample (or refuse to sample if n is already over this!)
+  :sample_limit:  0               # Stop at the nth sample (or refuse to sample if n is already over this!)
   :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:
@@ -62,19 +62,14 @@
   :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
   :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
 :server:                        # Network server properties
-  :interfaces:                    # Listen on the following list of interfaces...
-    -                             
-      :interface: localhost         # The interface to listen on
-      :port: 27400                  # The port to listen on
-    # - 
-    #   :interface: 148.88.227.135    
-    #   :port: 27400                  
+  :interface: localhost         # The interface to listen on
+  :port: 27400                  # The port to listen on
 :logging:                       # Logging and output options
   :progname: Server               # What to call the app in logs
   :logs:                          # A list of log outputs
     :default:                       # Call this log "default"
       :dev: STDOUT                  # Where to log.  Give a filename, or use 'STDOUT' or 'STDERR'
-      :level: :debug                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :info                 # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

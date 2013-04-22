@@ -2,12 +2,9 @@
 require 'lwac/shared/multilog'
 require 'lwac/shared/identity'
 require 'lwac/server/consistency_manager'
-require 'lwac/server/serialiser'
 require 'lwac/server/storage_manager'
 
-# Load marilyn, eventmachine gems
-require 'marilyn-rpc'
-require 'eventmachine'
+require 'lwac/server/rpc_server.rb'
 
 module LWAC
 
@@ -229,28 +226,20 @@ module LWAC
 
   # FIXME: avoid using a global for the server.
 
-  class DownloadService < MarilynRPC::Service
-    # TODO: make this configurable
-    register :lwacdownloader
-    
+  class DownloadService 
+   
+    def initialize(server)
+      @server = server
+    end
+
     # Ensure we handle only one thing at once
     MUTEX = Mutex.new
-
-    #def test(client_id, payload)
-      #MUTEX.synchronize{
-        #$log.info "Received test from #{client_id}"
-        #$log.info "Payload: #{payload.to_s}"
-      #}
-    #rescue StandardError => e
-      #$log.error "Exception: #{e}"
-      #$log.debug e.backtrace.join("\n")
-    #end
 
     # Send links to a user, and keep track of who asked for them
     def check_out(version, client_id, number_requested)
       version_check(version)
       MUTEX.synchronize{
-        $server.check_out(client_id, number_requested)
+        @server.check_out(client_id, number_requested)
       }
     rescue StandardError => e
       $log.error "Exception: #{e}"
@@ -262,7 +251,7 @@ module LWAC
     def check_in(version, client_id, datapoints)
       version_check(version)
       MUTEX.synchronize{
-        $server.check_in(client_id, datapoints)
+        @server.check_in(client_id, datapoints)
       }
     rescue StandardError => e
       $log.error "Exception: #{e}"
@@ -274,7 +263,7 @@ module LWAC
     def cancel(version, client_id)
       version_check(version)
       MUTEX.synchronize{
-        $server.cancel(client_id)
+        @server.cancel(client_id)
       }
     rescue StandardError => e
       $log.error "Exception: #{e}"

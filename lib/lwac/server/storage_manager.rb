@@ -1,6 +1,6 @@
 
 
-require 'lwac/server/serialiser'
+require 'lwac/shared/serialiser'
 require 'lwac/shared/identity'
 require 'lwac/shared/multilog'
 require 'lwac/shared/data_types'

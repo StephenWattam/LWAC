@@ -28,8 +28,6 @@ Gem::Specification.new do |s|
   # .map{|f| f.to_s[0..-(File.extname(f).to_s.length+1)] }    # TODO: add user documentation in html form
 
   # Deps
-  s.add_runtime_dependency 'marilyn-rpc',   '~> 0.0.4'
-  s.add_runtime_dependency 'eventmachine',  '~> 0.12'
   s.add_runtime_dependency 'curb',          '~> 0.8'
   s.add_runtime_dependency 'sqlite3',       '~> 1.3'
 
