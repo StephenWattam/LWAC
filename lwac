@@ -65,6 +65,7 @@ case tool
 
     # Start the client going
     dc = DownloadClient.new(config)
+
     # download
     dc.work
 

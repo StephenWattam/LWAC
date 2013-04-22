@@ -167,7 +167,7 @@ private
   def estimate_client_timeout(client_id, link_count)
     $log.debug "Estimating client timeout..."
     if @rates[client_id].is_a?(Numeric) then
-      return (@rates[client_id] * link_count) * 1.2  # TODO: make 1.2 configurable
+      return (@rates[client_id] * link_count) * @config[:client_management][:dynamic_time_overestimate].to_f
     end
 
     # Fall back on the old system
@@ -254,8 +254,6 @@ class DownloadService < MarilynRPC::Service
     MUTEX.synchronize{
       $server.check_out(client_id, number_requested)
     }
-  rescue SignalException => e
-    raise e
   rescue StandardError => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
@@ -268,8 +266,6 @@ class DownloadService < MarilynRPC::Service
     MUTEX.synchronize{
       $server.check_in(client_id, datapoints)
     }
-  rescue SignalException => e
-    raise e
   rescue StandardError => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")
@@ -282,8 +278,6 @@ class DownloadService < MarilynRPC::Service
     MUTEX.synchronize{
       $server.cancel(client_id)
     }
-  rescue SignalException => e
-    raise e
   rescue StandardError => e
     $log.error "Exception: #{e}"
     $log.debug e.backtrace.join("\n")

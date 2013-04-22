@@ -232,14 +232,16 @@ private
     response = nil
     begin
       response = yield(download_service)
-    rescue StandardError => e
-      $log.error "Exception: #{e}"
+    rescue SignalException => e
+      raise e
+    rescue Exception => e
+      $log.error "Error during operation: #{e}"
       $log.debug e.backtrace.join("\n")
+    ensure
+      # When done, disconnect
+      client.disconnect
+      $log.debug "Disconnected."
     end
-    
-    # When done, disconnect
-    client.disconnect
-    $log.debug "Disconnected."
 
     return response
   end
