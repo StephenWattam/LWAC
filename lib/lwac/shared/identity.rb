@@ -5,8 +5,8 @@ module LWAC::Identity
 
   # Versions that may be loaded by the storage manager
   # If it ain't in this list, it ain't coming off disk into RAM.
-  COMPATIBLE_CORPUS_VERSIONS  = [VERSION]
-  COMPATIBLE_NETWORK_VERSIONS = [VERSION]
+  COMPATIBLE_CORPUS_VERSIONS  = [LWAC::VERSION]
+  COMPATIBLE_NETWORK_VERSIONS = [LWAC::VERSION]
 
   # Print the author string?
   POMPOUS_MODE = true 
@@ -24,11 +24,11 @@ module LWAC::Identity
   # Present the version to the log
   def self.announce_version
     msgs = []
-    msgs << "LWAC v#{VERSION} (#{DATE})"
+    msgs << "LWAC v#{LWAC::VERSION} (#{LWAC::DATE})"
 
     if POMPOUS_MODE
-      auth_string = "by #{AUTHORS[0..3].map{|a| "#{a[:name]} <#{a[:contact]}>"}.join(", ")}"
-      auth_string += " and #{AUTHORS.length - 5} more." if AUTHORS.length > 5
+      auth_string = "by #{LWAC::AUTHORS[0..3].map{|a| "#{a[:name]} <#{a[:contact]}>"}.join(", ")}"
+      auth_string += " and #{LWAC::AUTHORS.length - 5} more." if LWAC::AUTHORS.length > 5
       msgs << auth_string
     end
 

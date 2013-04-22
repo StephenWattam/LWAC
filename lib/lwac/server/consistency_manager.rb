@@ -3,7 +3,7 @@ require 'thread'
 require 'set'
 require "lwac/shared/data_types"
 require "lwac/shared/multilog"
-require "lwac/storage_manager"
+require "lwac/server/storage_manager"
 
 module LWAC
 
@@ -247,7 +247,7 @@ module LWAC
 
     # Check against the config's sample limit, and raise sigint to stop if so.
     def check_sample_limit
-      if @state.current_sample and @config[:sample_limit] and @config[:sample_limit].to_i > 0 and (@state.current_sample.id.to_i + 1) >= @config[:sample_limit]  then
+      if @state.current_sample and @config[:sample_limit] and @config[:sample_limit].to_i > 0 and (@state.current_sample.id.to_i + 1) > @config[:sample_limit]  then
         $log.fatal "*** Sample limit (#{@config[:sample_limit]}) reached.  Shutting down..."
         raise SignalException.new('SIGTERM')
       end

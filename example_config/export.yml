@@ -1,5 +1,5 @@
 ---
-:server_config: config/server.yml     # Export reads the storage config from a server.  Point this at the server config.
+:server_config: example_config/server.yml     # Export reads the storage config from a server.  Point this at the server config.
 :output:                              # Output config, which is pretty much everything
   :announce: 2000                       # Every nth line, update the UI
   :filename: export.csv                 # Write to this file

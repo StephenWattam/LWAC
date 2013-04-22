@@ -9,10 +9,13 @@ Gem::Specification.new do |s|
   s.author      = 'Stephen Wattam'
   s.email       = 'stephenwattam@gmail.com'
   s.homepage    = 'http://stephenwattam.com/projects/LWAC'
-  s.required_ruby_version =  ::Gem::Requirement.new("~> 1.9")
+  s.required_ruby_version =  ::Gem::Requirement.new(">= 1.9")
   
   # Files + Resources
-  s.files         = Dir.glob("lib/*/*/*.rb") + Dir.glob("resources/schemata/*") + Dir.glob("user_docs/*") + Dir.glob("example_config/*.yml")
+  s.files         = Dir.glob("resources/schemata/*") + Dir.glob("doc/*") + Dir.glob("example_config/*.yml") + 
+                    Dir.glob("lib/*/*/*.rb") +
+                    Dir.glob("lib/*/*.rb") +
+                    Dir.glob("lib/*.rb") 
   s.require_paths = ['lib']
   
   # Executables
@@ -21,7 +24,8 @@ Gem::Specification.new do |s|
 
   # Documentation
   s.has_rdoc         = false
-  s.extra_rdoc_files = ['README.md'] + Dir.glob("user_docs/*.md")    # TODO: add user documentation in html form
+  s.extra_rdoc_files = ['README.md'] + Dir.glob("*.md")
+  # .map{|f| f.to_s[0..-(File.extname(f).to_s.length+1)] }    # TODO: add user documentation in html form
 
   # Deps
   s.add_runtime_dependency 'marilyn-rpc',   '~> 0.0.4'

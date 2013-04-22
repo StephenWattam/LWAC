@@ -1,6 +1,7 @@
 ---
-:server_config: config/server.yml     # Import reads the storage config from a server.  Point this at the server config.
-:schemata_path: ./resources/schemata    # Where to find .sql files for use as a schema
+:server_config: example_config/server.yml     # Import reads the storage config from a server.  Point this at the server config.
+:schemata_path:     # Where to find .sql files for use as a schema.  Leave blank for auto/default schemata
+#:schemata_path: ./resources/schemata    # Where to find .sql files for use as a schema
 :notify: 12345                        # Update the UI once per n links
 :create_db: true                      # Create the db if it doesn't already exist?
 :logging:                       # Logging and output options

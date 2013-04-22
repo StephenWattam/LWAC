@@ -102,7 +102,7 @@ module LWAC
 
       loop do
         ret = connect do |s|
-          s.check_out(Identity::VERSION, @uuid, @config[:client][:batch_capacity])
+          s.check_out(LWAC::VERSION, @uuid, @config[:client][:batch_capacity])
         end
 
         # If the server tells us to back off, so do.
@@ -141,7 +141,7 @@ module LWAC
         # send datapoints
         $log.info "Sending #{@pending.length} datapoints (~#{pending_size.round(2)}MB) to server..."
         connect do |s|
-          s.check_in(Identity::VERSION, @uuid, @pending)
+          s.check_in(LWAC::VERSION, @uuid, @pending)
         end
         $log.debug "Done."
       end
@@ -171,7 +171,7 @@ module LWAC
 
       $log.info "Cancelling at least #{@links.length} links."
       connect do |s|
-        s.cancel(Identity::VERSION, @uuid)
+        s.cancel(LWAC::VERSION, @uuid)
       end
 
     end
@@ -229,16 +229,15 @@ module LWAC
       response = nil
       begin
         response = yield(download_service)
-      rescue SignalException => e
-        raise e
-      rescue Exception => e
+      rescue StandardError => e
         $log.error "Error during operation: #{e}"
         $log.debug e.backtrace.join("\n")
       ensure
         # When done, disconnect
-        client.disconnect
         $log.debug "Disconnected."
       end
+
+      client.disconnect
 
       return response
     end

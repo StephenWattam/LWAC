@@ -258,7 +258,7 @@ module LWAC
 
       else
         $log.debug "No state.  Creating a new state file at #{@state_filename}"
-        @state = ServerState.new(Identity::VERSION)
+        @state = ServerState.new(LWAC::VERSION)
         Serialiser.dump_file(@state, @state_filename)
       end
 

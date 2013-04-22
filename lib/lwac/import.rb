@@ -8,6 +8,7 @@ module LWAC
       find_schemata
       load_server_config
       @enc = @server_config[:client_policy]
+
     end
 
     # Create a database at the given path
@@ -89,6 +90,7 @@ module LWAC
 
     # Looks in the schema directory and finds SQL files
     def find_schemata
+      @config[:schemata_path] = File.join(LWAC::RESOURCE_DIR, 'schemata') if not @config[:schemata_path]
       @schemata     = Dir.glob(File.join(@config[:schemata_path], "*.sql"))
     end
 

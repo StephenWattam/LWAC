@@ -47,7 +47,7 @@ class Exporter
       if @config[:output][:headers]
         $log.debug "Writing headers (line #{count+=1}/#{@estimated_lines})."
         csv_out << @config[:output][:format].keys
-        progress = announce(count, progress, @estimated_lines, @config[:output][:announce])
+        progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce])
       end 
 
       
@@ -71,8 +71,8 @@ class Exporter
       if(@config[:output][:level] == :server) then
           # output at server level
           $log.debug "Writing output at server level (line #{count+=1}/#{@estimated_lines})."
-          csv_out << produce_output_line( data, @config[:output][:format] )
-          progress = announce(count, progress, @estimated_lines, @config[:output][:announce])
+          csv_out << OutputFormatter::produce_output_line( data, @config[:output][:format] )
+          progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce])
       else
         # ...continue to sample at a lower level
         # -----------------------------------------------------------------------------
@@ -104,12 +104,12 @@ class Exporter
 
 
           # If this sample is filtered out, ignore it regardless of sampling level
-          if(filter(data, @config[:output][:filters][:sample])) then
+          if(OutputFormatter::filter(data, @config[:output][:filters][:sample])) then
             # If we wish to sample at the sample level, do so
             if(@config[:output][:level] == :sample) then
                 # output at server level
                 $log.debug "Writing output at sample level (line #{count+=1}/#{@estimated_lines})."
-                csv_out << produce_output_line( data, @config[:output][:format] )
+                csv_out << OutputFormatter::produce_output_line( data, @config[:output][:format] )
             else
               # ...continue and build more info
               # -----------------------------------------------------------------------------
@@ -138,12 +138,12 @@ class Exporter
 
 
                 # Filter out individual datapoints if necessary
-                if(filter(data, @config[:output][:filters][:datapoint])) then
+                if(OutputFormatter::filter(data, @config[:output][:filters][:datapoint])) then
                   # At this point we are at the finest-grained output possible, so
                   # just output!
                   $log.debug "Writing output at datapoint level (line #{count+=1}/#{@estimated_lines})."
-                  csv_out << produce_output_line( data, @config[:output][:format] )
-                  progress = announce(count, progress, @estimated_lines, @config[:output][:announce] )
+                  csv_out << OutputFormatter::produce_output_line( data, @config[:output][:format] )
+                  progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce] )
                 else
                   @estimated_lines -= 1
                   $log.info "Discarded datapoint #{data.datapoint.id} due to filter (revised estimate: #{@estimated_lines} lines)."
@@ -222,13 +222,13 @@ private
 
   # Compile formatting procedures
   def prepare_formatters
-    compile_format_procedures( @config[:output][:format] )
+    OutputFormatter::compile_format_procedures( @config[:output][:format] )
   end
 
   # Check and compile filters
   def prepare_filters
     @config[:output][:filters] = {} if not @config[:output][:filters]
-    compile_filters( @config[:output][:filters] )
+    OutputFormatter::compile_filters( @config[:output][:filters] )
   end
 
   # Estimate the time this is going to take and print to sc and print to screenn

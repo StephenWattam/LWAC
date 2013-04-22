@@ -1,21 +1,16 @@
 #!/usr/bin/env ruby
 
 # -----------------------------------------------------------------------------
-# Prevent people using this as a library
-if __FILE__ != $0 then
-  $stderr.puts "This script is intended to be run directly."
-  exit(1)
-end
-
-# -----------------------------------------------------------------------------
 # Load the launch tools and check gem prerequisites
+require 'lwac'
 require 'lwac/shared/launch_tools'
+require 'lwac/shared/identity'
 
 # Load config using launch_tools
-tool, config = load_config 
+tool, config = LWAC.load_config 
 
 # Announce version
-Identity::announce_version
+LWAC::Identity::announce_version
 
 # Summarise logs
 $log.summarise_logging
@@ -31,7 +26,7 @@ case tool
     require 'lwac/server'
       
     # Fire up the server
-    $server = DownloadServer.new(config)
+    $server = LWAC::DownloadServer.new(config)
 
     # Ensure we exit cleanly after EM's done
     $log.info "Registering exit handler for download server."
@@ -59,7 +54,7 @@ case tool
     require 'lwac/client'
 
     # Start the client going
-    dc = DownloadClient.new(config)
+    dc = LWAC::DownloadClient.new(config)
 
     # download
     dc.work
@@ -83,7 +78,7 @@ case tool
     require 'lwac/import'
 
     begin
-      im = Importer.new(config)
+      im = LWAC::Importer.new(config)
       im.import(file)
     rescue StandardError => e
       $log.fatal "#{e.to_s}"
@@ -99,7 +94,7 @@ case tool
     require 'lwac/export'
 
     # Construct the exporter object and load stuff from disk
-    ex = Exporter.new(config)
+    ex = LWAC::Exporter.new(config)
 
     # Dump stuff back to disk
     ex.export

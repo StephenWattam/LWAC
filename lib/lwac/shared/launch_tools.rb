@@ -9,7 +9,7 @@ require 'lwac/shared/multilog'
 
 module LWAC
 
-  def print_usage
+  def self.print_usage
     $stderr.puts "USAGE: #{$0} TOOL CONFIG"
     $stderr.puts ""
     $stderr.puts " TOOL   : one of 'server', 'client', 'import' or 'export'"
@@ -20,7 +20,7 @@ module LWAC
 
   # -----------------------------------------------------------------------------
   # Load configs from ARGV[0] and output usage info.
-  def load_config 
+  def self.load_config 
 
     # First, check arguments are fine.
     if ARGV.length < 2 or not File.readable?(ARGV[1]) then

@@ -12,4 +12,6 @@ module LWAC
              #{:name => "", :contact => ""}  # Add yourself here (and in the gemspec) if you contribute to LWAC
             ]
 
+  # Location of resources
+  RESOURCE_DIR = File.join( File.dirname( File.expand_path(__FILE__) ), '../resources/') 
 end
