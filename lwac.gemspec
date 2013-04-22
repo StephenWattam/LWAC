@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.required_ruby_version =  ::Gem::Requirement.new("~> 1.9")
   
   # Files + Resources
-  s.files         = Dir.glob("lib/*/*/*.rb") + Dir.glob("resources/schemata/*") + Dir.glob("user_docs/*")
+  s.files         = Dir.glob("lib/*/*/*.rb") + Dir.glob("resources/schemata/*") + Dir.glob("user_docs/*") + Dir.glob("example_config/*.yml")
   s.require_paths = ['lib']
   
   # Executables
