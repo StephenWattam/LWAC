@@ -120,12 +120,19 @@ pre > code {
 
 </style>
     </head>
-    <body onload="generateTOC(document.getElementById('toc'));">
+    <body>
+
+        <h1>LWAC User Guide</h1>
+
         <div id="nav">
             <div id="menu" style="margin: 0 auto; font-size: smaller; background-color: #ddd; text-align: center; padding: 0.2em 0.4em;">
                 <%= pages.sort.map{|p| "<a href=\"#{p}.html\" " + ((p == filename.to_s[0..-(File.extname(filename).to_s.length + 1)]) ? 'style="color: black;"' : '') + ">#{p}</a>"}.join("&nbsp;|&nbsp;") %>
             </div>
         </div>
         <%=content%> 
+
+        <div id="footer" style="margin: 0 auto; font-size: smaller; background-color: #ddd; text-align: center; padding: 0.2em 0.4em;">
+            Generated on <%=Time.now%>
+        </div>
     </body>
 </html>
