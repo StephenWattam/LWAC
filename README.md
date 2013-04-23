@@ -14,8 +14,7 @@ The client and server components have slightly different dependencies: the clien
 ### Common dependencies
 
   * Ruby 1.9.1+ (String#encode is required)
-  * Marilyn RPC system (gem install -r marilyn-rpc)
-  * Eventmachine (should come with Marilyn)
+  * simplerpc
 
 ### Client
 

@@ -8,8 +8,8 @@ require 'markdown'
 require 'fileutils'
 require 'erb'
 
-output_dir = "./docs"
-MARKDOWN_EXTENSIONS = %w{markdown mdown mkdn md mkd mdwn mdtxt mdtext text} 
+input_dir = "./user/*"
+output_dir = "./html_docs"
 TEMPLATE = "template.rhtml"
 
 if File.exist?(output_dir) then
@@ -26,20 +26,20 @@ end
 FileUtils.mkdir_p(output_dir)
 
 # create list of pages
-pages = Dir.glob("*").to_a.delete_if{|f| not MARKDOWN_EXTENSIONS.include?(File.extname(f).to_s[1..-1]) }.map{|f| f.to_s[0..-(File.extname(f).length + 1)]}
+pages = Dir.glob(input_dir).to_a.delete_if{|f| File.extname(f)[1..-1] != "md" or File.directory?(f)}.map{|f| File.basename(f).to_s[0..-(File.extname(f).length + 1)]}
 
 puts "LIST: #{pages.to_s}"
 
-Dir.glob("*"){|f|
-  if MARKDOWN_EXTENSIONS.include?(File.extname(f).to_s[1..-1]) then
-    puts "Compiling #{File.basename(f)}..."
+Dir.glob(input_dir){|f|
+  if not File.directory?(f) and File.extname(f) == ".md" then
+    puts "Compiling #{f}..."
 
     File.open(File.join(output_dir, File.basename(f)[0..-(File.extname(f).length + 1)] + ".html"), 'w'){|of|      
       of.write( template(f, Markdown.new(File.read(f)).to_html, pages ))
     }
   elsif f != $0 and File.basename(f) != File.basename(output_dir)
     puts "Copying #{f}..."
-    FileUtils.cp_r(f, File.join(output_dir, f))
+    FileUtils.cp_r(f, File.join(output_dir, File.basename(f)))
   end
 }
 

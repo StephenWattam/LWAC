@@ -1,4 +1,3 @@
-
 Gem::Specification.new do |s|
   # About the gem
   s.name        = 'lwac'
@@ -24,8 +23,7 @@ Gem::Specification.new do |s|
 
   # Documentation
   s.has_rdoc         = false
-  s.extra_rdoc_files = ['README.md'] + Dir.glob("*.md")
-  # .map{|f| f.to_s[0..-(File.extname(f).to_s.length+1)] }    # TODO: add user documentation in html form
+  s.extra_rdoc_files = Dir.glob("*.md") 
 
   # Deps
   s.add_runtime_dependency 'curb',          '~> 0.8'
@@ -35,3 +33,5 @@ Gem::Specification.new do |s|
   # Misc
   s.post_install_message = "Have fun."
 end
+
+
