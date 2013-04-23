@@ -234,7 +234,8 @@ module LWAC
       @files_per_dir  = config[:files_per_dir]
 
       # Debug info
-      $log.debug "Storage manager starting, serialising using #{Serialiser::METHOD}"
+      $log.debug "Storage manager starting, serialising using #{config[:serialiser]}"
+      @serialiser = Serialiser.new(config[:serialiser])
 
       # Database storage
       config[:database][:filename] = File.join(config[:root], config[:database][:filename])
@@ -243,7 +244,7 @@ module LWAC
       # Try to load the current server state
       @state_filename = File.join(@root, config[:state_file])
       if(File.exist?(@state_filename))
-        @state = Serialiser.load_file(@state_filename)
+        @state = @serialiser.load_file(@state_filename)
 
         # Version check on the state file that describes the corpus
         if not @state.respond_to?(:version) or not Identity::storage_is_compatible?(@state.version) then
@@ -259,7 +260,7 @@ module LWAC
       else
         $log.debug "No state.  Creating a new state file at #{@state_filename}"
         @state = ServerState.new(LWAC::VERSION)
-        Serialiser.dump_file(@state, @state_filename)
+        @serialiser.dump_file(@state, @state_filename)
       end
 
       # Create the sample subdir
@@ -294,14 +295,14 @@ module LWAC
     def write_datapoint(dp, sample = @state.current_sample)
       $log.debug "Writing datapoint #{dp.link.id} (sample #{sample.id}) to disk."
       dp_path = get_dp_filepath(dp, sample.id)
-      Serialiser.dump_file( dp, dp_path)
+      @serialiser.dump_file( dp, dp_path)
     end
 
     # Read a datapoint from disk
     def read_datapoint(dp_id, sample = @state.current_sample)
       $log.debug "Reading datapoint #{dp_id} (sample #{sample.id}) from disk."
       dp_path = get_dp_filepath(dp_id, sample.id)
-      Serialiser.load_file( dp_path )
+      @serialiser.load_file( dp_path )
     end
 
     ## Datapoint disk lookup
@@ -311,14 +312,14 @@ module LWAC
     # Write a finalised sample to disk in its proper location.
     def write_sample(sample = @state.current_sample)
       sample_path = File.join( get_sample_filepath(sample.id), @config[:sample_filename])
-      Serialiser.dump_file( sample, sample_path )
+      @serialiser.dump_file( sample, sample_path )
     end
 
     # Read a finalised sample ID from disk.
     # raises Errno::ENOENT if not there
     def read_sample(sample_id = @state.last_sample_id)
       sample_path = File.join( get_sample_filepath(sample_id), @config[:sample_filename])
-      Serialiser.load_file( sample_path )
+      @serialiser.load_file( sample_path )
     end
 
 
@@ -400,32 +401,8 @@ module LWAC
 
     # Write the server state to disk
     def write_state
-      Serialiser.dump_file( @state, @state_filename)
+      @serialiser.dump_file( @state, @state_filename)
     end
-
-  end
-
-
-  private
-
-
-  # Test script
-  if __FILE__ == $0 then
-
-    $log = MultiOutputLogger.new($stdout)
-    $log.set_level(:default, Logger::DEBUG)
-
-    config = Serialiser.load_file("config/server.yml")
-
-    sm = StorageManager.new(config[:storage])
-
-    # puts "#{sm.count_links(0)}"
-   
-    # puts "#{sm.read_link_ids( 1, 2).to_a}"
-
-    # sm.read_links([1,1,2,3,4,4,2,1,2,2,1]).each{|link|
-    #   puts "LINK: #{link}"
-    # }
 
   end
 

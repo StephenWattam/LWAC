@@ -24,16 +24,19 @@ case tool
   # ---------------------------------------------------------------------------
   when :server
     require 'lwac/server'
-    require 'lwac/server/rpc_server'
+    require 'simplerpc/server'
       
     # Fire up the server
     server = LWAC::DownloadServer.new(config)
     proxy = LWAC::DownloadService.new(server)
     
     # construct the rpc handler
-    rpc = LWAC::RPCServer.new( proxy, config[:server][:port], :marshal )   # TODO: more serialisation formats and interface option
+    rpc = SimpleRPC::Server.new( proxy, config[:server][:port], 
+                                 config[:server][:interface], 
+                                 SimpleRPC::Serialiser.new(config[:server][:serialiser]) )
 
     # listen
+    $log.info "Starting server on #{config[:server][:interface]}:#{config[:server][:port]}"
     loop{
       begin
         rpc.listen

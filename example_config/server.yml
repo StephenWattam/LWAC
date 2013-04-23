@@ -5,6 +5,7 @@
   :sample_subdir: samples         # Where to keep samples (root/sample_subdir)
   :sample_filename: sample    # What to call each file (root/sample_subdir/id/sample.yml
   :files_per_dir: 1000            # How many files to store in each directory (root/sample_subdir/id/XX/)
+  :serialiser:  :marshal          # :marshal or :yaml.  :marshal is faster but :yaml can be read by other languages
   :database:                      # Config options affecting the metadata database
     :filename: links.db             # Name of the database, relative to corpus root (root/filename)
     :table: links                   # The name of the links table within the sqlite db
@@ -62,8 +63,9 @@
   :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
   :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
 :server:                        # Network server properties
-  :interface: localhost         # The interface to listen on
+  :interface: 127.0.0.1         # The interface to listen on
   :port: 27400                  # The port to listen on
+  :serialiser:  :marshal                  # :marshal or :yaml.  :marshal highly recommended.
 :logging:                       # Logging and output options
   :progname: Server               # What to call the app in logs
   :logs:                          # A list of log outputs

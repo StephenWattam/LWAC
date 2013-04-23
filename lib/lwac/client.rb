@@ -4,12 +4,16 @@ require 'lwac/client/storage'
 
 require 'lwac/shared/multilog'
 require 'lwac/shared/identity'
+require 'lwac/shared/serialiser'
 
-
-require 'lwac/client/rpc_client.rb'
 
 require 'timeout'
 require 'digest/md5'
+
+
+require 'simplerpc/client'
+require 'lwac/shared/data_types'  # for serialisation
+
 
 module LWAC
 
@@ -27,7 +31,8 @@ module LWAC
       compute_reconnection_time
 
       # Fire up el RPC client...
-      @rpc_client = RPCClient.new( @config[:server][:address], @config[:server][:port], :marshal)  # TODO: more serialisation formatus
+      @rpc_client = SimpleRPC::Client.new( @config[:server][:address], @config[:server][:port], 
+                                           SimpleRPC::Serialiser.new( @config[:server][:serialiser] ) ) 
 
       # Current working links and download policy
       @links        = []

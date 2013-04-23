@@ -30,6 +30,7 @@ Gem::Specification.new do |s|
   # Deps
   s.add_runtime_dependency 'curb',          '~> 0.8'
   s.add_runtime_dependency 'sqlite3',       '~> 1.3'
+  s.add_runtime_dependency 'simplerpc',     '~> 0.1'
 
   # Misc
   s.post_install_message = "Have fun."

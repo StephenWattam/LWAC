@@ -4,7 +4,6 @@ require 'lwac/shared/identity'
 require 'lwac/server/consistency_manager'
 require 'lwac/server/storage_manager'
 
-require 'lwac/server/rpc_server.rb'
 
 module LWAC
 
