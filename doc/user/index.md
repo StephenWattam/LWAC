@@ -1,6 +1,6 @@
 LWAC 0.2.0 User Guide
 =====================
-Welcome to the LWAC user guide.  The purpose of this document is to explain some of the design concepts used and provide recipes for completing common tasks.
+Welcome to the LWAC user guide.  The purpose of this document is to explain some of the design concepts used, provide recipes for common tasks, and explain some of the technical capacities/limitations of LWAC.
 
 Installation and Dependencies
 -----------------------------

@@ -4,9 +4,9 @@ LWAC was designed to maximise throughput to the web, and as such easily stretche
 
 Throughput
 ----------
-The system is capable of downloading around 2.5 million pages per hour per client when resource speed is not an issue.  This slows to roughly 100,000 per hour per client when using real-world, year-old URL lists.  
+The system is capable of downloading around 2.5 million pages per hour per client when resource speed is not an issue.  This slows to roughly 100,000 per hour per client when using real-world (year-old) URL lists.  This equals roughly 10-100 million words per hour in practice.
 
-Most speed issues are caused by the slow response of servers, for which parallelism is the only practical solution.  If your URL list includes many links pointing to the same server, it's worth noting that the tool can download at around 20Mbps/client in a sustained manner---this most certainly breaks netiquette and may be sufficient to overload some hosts.
+Most speed issues are caused by the slow response of servers, for which parallelism is the only practical solution.  It's worth noting that the tool can download at around 20Mbps/client in a sustained manner---this most certainly breaks netiquette and may be sufficient to overload some hosts if you have many links pointing to the same servers.
 
 Network
 -------
@@ -20,22 +20,18 @@ Increasing the size of a batch will have a number of effects.
 
  1. More data will be queued up in RAM on both the client and the server.  The server will, at most, `hold cache_size * number_of_clients` links in memory.  The client will store at most its batch size.  Generally this is not an issue, as any modern system can store millions of Link objects in memory.
  2. Transfer between client and server will lock out other clients until complete, so smaller batches allow for better client load-balancing.
- 3. All links must be downloaded from the web before uploading data back to the server.  Having more links in a batch means this takes longer, which may cause competition with other clients (see the timeout options in the [server configuration](server_config.html))
 
-In my experience, sizes of 1000-10,000 are suitable for smaller corpora, and/or low client specifications.  It's worth noting that a batch size of 50,000 will download around 600MB of data (if targeting HTML), and this will need to be stored in the client cache before transfer.
+In my experience, sizes of 1000-10,000 are suitable for smaller corpora, and/or low client specifications.  Even if your web pages are small, there is overhead in managing the cache prior to sending it to the server, so batch sizes in excess of around 20,000 start slowing down (changing the client cache policy can help this).
 
 
 #### Client Competition
 Clients compete with one another for server time, and follow this algorithm to do so:
 
- 1. Get links from server 
- 2. Disconnect
- 3. Download data from the web
- 4. Upload links to server
- 5. Disconnect
- 6. see (1)
-
-The more time a client is downloading, the more time other clients can connect.  Conversely, smaller batches cause a corpus to be broken up and spread about more, so can be better at load-balancing.
+ 1. Start worker servers
+ 2. Maintain work:
+   * If the link pool is empty, connect to the server to get more links
+   * When N MB of data have been downloaded, contact the server to upload
+ 3. When the server has no links to give, wait and back off
 
 The server can support an unlimited number of clients, but beyond a point they will start locking one another out and efficiency drops off.  This point is highly dependent on:
   
@@ -52,6 +48,8 @@ LWAC places significant stress on the connection to the web, and can trigger thi
 #### Proxies/single points of failure
 Proxies can be configured in the curl settings (`client_policy` section of the [server config](server_config.html)), however, they are subject to a number of effects that are generally undesirable for sampling (such as caching and header rewriting), and present a single point of failure which handles all of the stress.
 
+Unfortunately there is currently no method to set a different proxy on each client (this is due in a later version).
+
 #### DNS
 DNS lookup is considered an integral part of fetching web data, and is thus repeated every time a client downloads a link.  If this places undue stress on one's DNS provider, a local cache can vastly reduce outgoing traffic with relatively little risk of damaging the quality of resultant data.
 
@@ -65,7 +63,7 @@ The filesystem is used extensively in LWAC both as backing store and as a cache.
 The server's use of the filesystem is twofold:
 
  * Corpus backing store
- * SQLite3 database
+ * SQLite3 database (read only)
 
 #### Max Files per Dir
 Many filesystems impose a fairly low limit on the number of files that will fit in one directory.  Since one file per datapoint is used in a corpus, they may be spanned over many directories.  See the [server config](server_config.html) for the relevant configuration properties.
@@ -90,11 +88,11 @@ On unix systems, the limit can be read using the command `ulimit -a`, where it i
 #### Cache Filesize
 The file caching system is based on a single file, which will grow to the size of the sum of all data downloaded in one batch.  In testing with HTML data, this generally means about 10MB for every thousand links.
 
-The cache system uses repeated `fseek` calls to look up data.  If your filesystem is very bad at seeking, it may be wiser to use a memory cache instead.
+The client's cache system uses repeated `fseek` calls to look up data.  If your filesystem is very bad at seeking, it may be wiser to use a memory cache instead.
 
 Memory Usage
 ------------
-LWAC was designed for large samples, and as such its memory usage is minimal and configurable.
+LWAC was designed for large samples, and as such its memory usage is minimal, static (O(1) complexity w.r.t. total corpus size), and configurable.
 
 ### Server
 The server requires enough memory to store:
@@ -103,7 +101,7 @@ The server requires enough memory to store:
  * Datapoints currently being checked in (see `check_in_rate` in the [client config](client_config.html) to set this in MB)
  * SQLite3 cache (see above)
 
-This means that the server should always be using less than a few hundred megabytes of RAM, and much of that is ruby/libsqlite3/marilyn/eventmachine.
+This means that the server should always be using less than a few hundred megabytes of RAM, and much of that is ruby/libsqlite3/libcurl.
 
 ### Client
 The client typically uses more RAM:

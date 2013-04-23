@@ -7,6 +7,7 @@ require 'lwac/server/storage_manager'
 
 module LWAC
 
+  # Handles link allocation to clients within the LWAC system
   class DownloadServer
     def initialize(config)
       @config       = config
@@ -223,16 +224,18 @@ module LWAC
   end
 
 
-  # FIXME: avoid using a global for the server.
-
+  # Mediates client access to the server by acting as a web service API.
+  #
+  # Also handles thread safety, though of 0.2.0b SimpleRPC does that for us.
   class DownloadService 
-   
-    def initialize(server)
-      @server = server
-    end
 
     # Ensure we handle only one thing at once
     MUTEX = Mutex.new
+   
+    # Create a new DownloadService object with a given DownloadServer
+    def initialize(server)
+      @server = server
+    end
 
     # Send links to a user, and keep track of who asked for them
     def check_out(version, client_id, number_requested)

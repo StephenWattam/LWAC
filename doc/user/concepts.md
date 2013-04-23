@@ -1,16 +1,18 @@
 LWAC Concepts
 =============
-This document describes the format and purpose of the corpus which LWAC is based around, and serves to describe how one would go about operationalising the data therein.
+This document describes the format and purpose of the corpus around which LWAC is based, and serves to describe how one would go about operationalising the data therein.
 
 
 Overview
 --------
-LWAC is based around a central longitudinal corpus, stored in an arbitrary directory (as defined in the server config).  This means the process of sampling is thus:
+LWAC is based around a central longitudinal corpus, stored in an arbitrary directory (as defined in the server config) in a serialised object format (JSON, YAML, or ruby's native binary format).  This means the process of sampling is thus:
 
  1. Define a population of links
  2. Sample them with as small a time differential as possible
  3. Wait until the next sample time
  4. go to 2
+
+A `link` without web data attached is known as a `datapoint` in this documentation.  A `sample` is one cross-sectional attempt to download all links.
 
 Theoretically, this forms three levels at which we may access the data:
 
@@ -18,14 +20,11 @@ Theoretically, this forms three levels at which we may access the data:
  2. Sample level, describing one attempt to download links (a conventional cross-sectional sample containing many datapoints);
  3. Datapoint level, describing one attempt to download a single link.
 
-Simply, a server has many samples, each of which has many data points.  Samples are temporally homogenous to the greatest extent possible, and datapoints refer to the same URI (for their id).  Since the cumulative time taken to download each sample applies some drift, links are downloaded in a random order and as intensively as possible.
+Simply, a server has many samples, each of which has many datapoints.  Samples are temporally homogenous to the greatest extent possible, and datapoints refer to the same URI (for their id).  Since the cumulative time taken to download each sample applies some drift, links are downloaded as intensively as possible.
 
 The corpus, as stored on disk, consists of two types of storage:
 
- 1. Metadata, stored in an SQLite database, which contains tables describing:
-     * All links to retrieve
-     * The properties of each sample (including some simple summary statistics)
-     * Each request for each link (pointing to the files themselves)
+ 1. Metadata, stored in an SQLite database, which contains a table simply listing the links along with a unique ID.
  2. Corpus data, stored in a flatfile structure as serialised ruby DataPoint objects.
 
 The format of the corpus is described in greater detail in the rest of this document.
@@ -61,8 +60,11 @@ The corpus includes:
 
 
 ### File Formats
-Each of the files within a corpus, with the exception of the metadata database, is a serialised ruby object, as defined in `/lib/shared/data_types.rb`.  These objects are serialised using Marshal, and are thus binary format.
+Each of the files within a corpus, with the exception of the metadata database, is a serialised ruby object, as defined in `/lib/shared/data_types.rb`.  These objects are serialised using one of three formats:
+ 
+ * `:marshal` --- Ruby's native binary format is very fast but cannot realistically be read from other languages
+ * `:json` --- JSON is widely used but slow
+ * `:yaml` --- YAML is also readable by other languages, but is slow (around 60 times slower than `:marshal`)
 
-It is possible to switch to YAML format, which is readable by other tools and languages, however, this breaks compatibility with corpora of the other format.  If you wish to make this change for a specific research purpose, see the [server config](server_config.yml).  It's also worth noting that YAML is roughly 60 times slower.
-
+Note that a corpus written using one serialisation system will be unreadable by a server using another.  I highly recommend using `:marshal` and using the export tool to extract your data into a more workable format later.
 

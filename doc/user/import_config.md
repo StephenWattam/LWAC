@@ -7,13 +7,13 @@ Config
 ------
 The import tool uses the server configuration to access a corpus, and loads it as if it were a server.
 
- * `server_config` --- The path to the server configuration file.  The importer will use this for storage properties and string sanitisation settings.
+ * `server_config`  --- The path to the server configuration file.  The importer will use this for storage properties and string sanitisation settings.
 
 Other than that its configuration options apply to output and file handling:
 
- * `schemata_path` --- The path where `.sql` files may be found for creating a database
- * `create_db` --- Boolean.  Set to `true` to make the import script attempt to create the database if it doesn't exist
- * `notify` --- How many lines should be import before the UI updates and tells the user.
+ * `schemata_path`  --- The path where `.sql` files may be found for creating a database.  Leave this blank to use defaults that come bundled with LWAC.
+ * `create_db`      --- Boolean.  Set to `true` to make the import script attempt to create the database if it doesn't exist.
+ * `notify`         --- How many lines should be import before the UI updates and tells the user.
 
 
 Logging

@@ -8,8 +8,7 @@ module LWAC
 
   # This class wraps three possible serialisation systems, providing a common interface to them all.
   #
-  # It's not a necessary part of SimpleRPC---you may use any object that supports load/dump---but it is
-  # rather handy.
+  # This is largely ripped from SimpleRPC, with some minor modifications.
   class Serialiser
 
     SUPPORTED_METHODS = %w{marshal json msgpack yaml}.map{|s| s.to_sym}

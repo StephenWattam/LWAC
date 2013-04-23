@@ -15,6 +15,7 @@ Storage is defined by the `/storage/` key, and contains details on the corpus an
  * `sample_subdir`   --- The name of the directory within the corpus where samples will be stored.
  * `sample_filename` --- The filename where summary details on a particular sample are stored.
  * `files_per_dir`   --- How many files to store in each directory below the `sample_subdir`.  This is set to avoid overloading filesystems that have finite inode tables.
+ * `serialiser`      --- The serialisation method used to write to disk.  Supported methods are `:marshal`, `:yaml` or `:json`.  `:marshal` is fastest and recommended unless you desperately need to access the corpus using languages other than ruby.
 
 ### Database Details
 
@@ -99,9 +100,9 @@ Server
 ------
 These settings govern the network properties of the server, as used for data transfer to and from clients.
 
- * `interfaces[]{}` --- A list of interfaces to listen on.  Each interface should be a hash containing an ip and a port:
-    * `interfaces[]/interface` --- The hostname or IP address of an interface on which to listen
-    * `interfaces[]/port` --- The port on which to listen for this interface
+ * `interface` --- The hostname or IP address of an interface on which to listen
+ * `port` --- The port on which to listen for this interface
+ * `serialiser` --- The serialisation system used for communications with the client.  `:marshal`, `:yaml` and `:json` are supported.  `:marshal` is by far the fastest of these and is strongly recommended.  This must match the client's configuration.
 
 
 Logging

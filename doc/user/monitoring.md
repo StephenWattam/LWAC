@@ -1,6 +1,6 @@
 Monitoring/Maintenance
 ======================
-LWAC should require little maintenance beyond initial deployment.  It is heavily network-dependent, and as such its libraries should be kept up-to-date for security purposes (simply re-run the [deploy script](install.html) with optimistic version handling).
+LWAC should require little maintenance beyond initial deployment.  It is heavily network-dependent, and as such its libraries should be kept up-to-date for security purposes.
 
 
 Disk Space

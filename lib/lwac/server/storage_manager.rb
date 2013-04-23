@@ -12,12 +12,12 @@ require 'set'
 
 module LWAC
 
-
-
-  # Generically handles an sqlite3 database
+  # Generically handles an sqlite3 database with a slightly cleaner API
+  # than raw SQL.
   class DatabaseConnection
     attr_reader :dbpath
 
+    # Create a new connection to a database at dbpath.
     def initialize(dbpath, transaction_limit=100, pragma={})
       @transaction        = false
       @transaction_limit  = transaction_limit
@@ -26,14 +26,18 @@ module LWAC
       configure( pragma )
     end
 
+    # Disconnect from the database.
     def close
       disconnect
     end
 
+    # Set the underlying SQLite3 object's propensity to return results
+    # as a hash
     def results_as_hash= bool
       @db.results_as_hash = bool
     end
 
+    # Is the database set up to return results as a hash?
     def results_as_hash
       @db.results_as_hash
     end
@@ -150,9 +154,12 @@ module LWAC
 
 
 
-  # Database engine for links only, retrieval only.
+  # Database engine for links only.  
+  #
+  # By default this is read-only, as all but the import tool should not be able
+  # to edit the database.
   class DatabaseStorageManager < DatabaseConnection
-    def initialize(config)
+    def initialize(config, read_only=true)
       $log.debug "Connecting to database at #{config[:filename]}"
       super(config[:filename], config[:transaction_limit], config[:pragma])
       $log.debug "Connected to database at #{config[:filename]}"
@@ -161,10 +168,13 @@ module LWAC
       @config             = config
       results_as_hash     = true
 
+      # Read-only mode designed for servers.
+      @read_only          = read_only
     end
 
     # Insert a link
     def insert_link(uri)
+      raise "Attempt to insert link whilst in read-only mode." if @read_only
       insert(@config[:table], {"uri" => uri})
     end
 

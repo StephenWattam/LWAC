@@ -2,7 +2,12 @@ require 'lwac/server/storage_manager'
 require 'sqlite3'
 
 module LWAC
+
+  # Handles the importing of links to a database
   class Importer
+
+    # Create a new Importer object with a given config.  See the import_config docs page for details
+    # on the form of this config hash.
     def initialize(config)
       @config = config
       find_schemata
@@ -108,8 +113,8 @@ module LWAC
         end
       end
 
-      # Create new storage manager with config
-      @db = DatabaseStorageManager.new(@server_config[:storage][:database])
+      # Create new storage manager with config in read-write mode
+      @db = DatabaseStorageManager.new(@server_config[:storage][:database], false) 
     end
 
     # Close the db connections

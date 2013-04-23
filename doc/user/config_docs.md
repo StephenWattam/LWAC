@@ -35,6 +35,6 @@ Where YAML keys contain hashes, that must be retained as simple key-value pairs 
 
 Symbols and Data Formats
 ------------------------
-Most, though not all, keys in LWAC configuration files are symbols, and thus are prefixed with a colon (:).  Those that are specifically not symbols are noted as such in the text, as it is normally relevant to their use.
+Most, though not all, keys in LWAC configuration files are ruby symbols, and thus are prefixed with a colon (:).  Those that are specifically not symbols are noted as such in the text, as it is normally relevant to their use.
 
-Booleans and other binary options are also noted in the text, and it's worth noting that ruby considers `nil` to be false in boolean tests.
+Booleans and other binary options are also noted in the text.  It's worth noting that ruby considers `nil` to be false in boolean tests.
