@@ -21,37 +21,38 @@ module LWAC
 
     # Should be run in a thread.  Performs work until the dispatcher runs out of data.
     def work(dispatcher)
+      # start idle
+      last_idle_state = true 
+
       loop{
-        return if @abort
         while( work = dispatcher.get_link) do
 
-          # TODO: make this only called if the last run wasn't active too
-          @pool.active(@id)
+          # If we were idle last, tell the pool
+          @pool.active(@id) if last_idle_state == true
 
-
+          # Load link and policy
           @link    = work[:link]
           @config  = work[:config]
 
+          # tell people
           $log.debug "W#{@id}: Downloading link #{@link.id}: #{@link.uri}"
 
+          # Make the request
           @pool.complete_request(@id, @link, new_curl, @config)
 
-          return if(@abort)
+          return if @abort 
         end
+        return if @abort
 
         # TODO: configurable
         @pool.idle(@id)
+        last_idle_state = true
         sleep(1)
       }
-      
-      puts "{/#{dispatcher}}"
 
-
-      rescue SignalException => e
-        $log.fatal "Signal caught: #{e.message}"
-        $log.fatal "Since I'm sampling right now, I will kill workers before shutdown."
-        raise e
-
+    rescue StandardError => e
+      $log.warn "W#{@id}: Error: #{e}"
+      $log.debug "#{e.backtrace.join("\n")}"
     end
 
     # Closes the connection to the server
@@ -187,7 +188,7 @@ module LWAC
     # Wait for threads to complete.
     def wait
       $log.debug "Waiting for #{@t.length} worker[s] to close."
-      @t.each{|t| t.join}
+      @t.each{|t| t.join }
       $log.info "Workers all terminated naturally."
     end
 
@@ -216,18 +217,19 @@ module LWAC
 
     # Summarise the progress after a sample.
     def summarise
-      $log.info "Queue complete."
+      $log.info "Pool summary:"
       $log.info "  Response:"
       $log.info "    200    : #{@count_200}"
       $log.info "    404    : #{@count_404}"
       $log.info "    other  : #{@count_other}"
       $log.info "  Errors   : #{@errors}"
       $log.info "  Complete : #{@complete}"
+      $log.info "  MBytes   : #{@bytes/1024/1024}"
 
       if @start_time then
         now = Time.now
-        rate = @bytes*8 / (now - @start_time)
-        $log.info "Downloaded #{(@bytes.to_f / 1024.0 / 1024.0).round(2)}MB in #{(now - @start_time).round}s (#{(rate / 1024 / 1024).round(2)}Mbps)"
+        rate = @bytes / (now - @start_time)
+        $log.info "Downloaded #{(@bytes.to_f / 1024.0 / 1024.0).round(2)}MB in #{(now - @start_time).round}s (#{(rate / 1024 / 1024).round(2)}MBps)"
       end
     end
 
@@ -241,11 +243,10 @@ module LWAC
 
     # Close all workers' connections to the servers
     def close
-      $log.debug "Requesting closure of #{@w.length} worker[s]."
+      $log.debug "Requesting closure of #{@w.length} worker[s]..."
       @w.each{|w|
         w.close
       }
-      $log.info "Workers closed by request."
     end
 
     # Returns true if the cache is full and workers are waiting to put things into it

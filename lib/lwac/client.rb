@@ -89,15 +89,16 @@ module LWAC
     rescue SignalException => se
       $log.fatal "Caught signal!"
 
-      $log.info "Shutting down pool..."
-      # Wait for the worker pool to die
-      $log.info "Killing worker threads..."
-      @pool.close
-      @pool.wait
-
       $log.info "Contacting the server to cancel links..."
       cancel_batch
 
+      @pool.summarise
+      $log.info "Shutting down pool..."
+
+      # Wait for the worker pool to die
+      $log.info "Cleanly closing workers (may take a while)..."
+      @pool.close
+      @pool.wait
 
       # Remove the cache
       $log.info "Closing pool cache..."
