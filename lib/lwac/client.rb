@@ -29,23 +29,25 @@ module LWAC
       # compute the time before which we must not retry
       reset_reconnection_timer
       compute_reconnection_time
+      @batch_request_delay  = Time.now  # don't recontact the server before this
 
       # Fire up el RPC client...
       @rpc_client = SimpleRPC::Client.new( @config[:server][:address], @config[:server][:port], 
                                            SimpleRPC::Serialiser.new( @config[:server][:serialiser] ) ) 
 
       # Current working links and download policy
-      @links        = []
+      @links        = {}
       @link_mutex   = Mutex.new
 
 
       # Create worker pool
       $log.info "Creating worker pool and starting work..."
-      @pool = WorkerPool.new(@config[:client][:simultaneous_workers], new_pool_cache, @uuid)
+      @pool = WorkerPool.new(@config[:client][:simultaneous_workers], new_pool_cache, 
+                             @config[:client][:cache_limit] * 1024 * 1024, 
+                             @config[:client][:strict_cache_limit], @uuid)
       @pool_thread = Thread.new(self){ |dispatcher| maintain_worker_pool(dispatcher) }
 
       # Should we really care about being able to contact the server?
-      @shutdown     = false
 
       # Start the log with UUID info.
       $log.info "Client started with UUID: #{@uuid}"
@@ -55,22 +57,29 @@ module LWAC
     #
     # Raise SIGINT to stop.
     def work
+      last_batch_size = 0
+
       loop{ 
 
-
-        # TODO: major thread safety issue with links refs.
-        $log.info "*** [#{@links.length} remaining] #{(@pool.cache_size.to_f / 1024.0 / 1024.0 ).round(2)}MB"
-
         # Delay to stop us eating CPU when spinning
-        sleep(0.5)
-      
+        sleep(@config[:client][:monitor_rate])
+
+        if @config[:client][:announce_progress] then
+          # TODO: major thread safety issue with links refs.
+          progress = (@pool.cache_size.to_f / 1024.0 / 1024.0 ).round(2)
+          pc_progress = ((progress / @config[:client][:cache_limit]) * 100)
+          $log.info "*** #{progress_bar(@config[:client][:cache_limit], progress)} #{pc_progress.round}% #{progress}/#{@config[:client][:cache_limit]}MB (#{@links.length} pend, #{@pool.count_datapoints} cache, #{@pool.count_idle} idle) #{(@links.length == 0 && Time.now < @batch_request_delay) ? '[waiting]' : ''}"
+        end
+
         # Run out of links
-        if @links.length == 0 then
-          acquire_batch
+        if @links.length == 0 and Time.now > @batch_request_delay then
+            # reports the number of links acquired
+            acquire_batch
         end
 
         # Downloaded enough data already
-        if (@pool.cache_size.to_f / 1024.0 / 1024.0) > @config[:client][:check_in_size] then
+        if (@pool.all_idle? and @pool.count_datapoints > 0) or @pool.cache_limit_reached? then
+          # (@pool.cache_size.to_f / 1024.0 / 1024.0) > @config[:client][:cache_limit] then
           # Send completed points back to the server
           send_batch(@pool.get_datapoints( new_pool_cache ) )
         end
@@ -79,10 +88,24 @@ module LWAC
 
     rescue SignalException => se
       $log.fatal "Caught signal!"
-      @shutdown = true
-      $log.fatal "Contacting the server to cancel links..."
+
+      $log.info "Shutting down pool..."
+      # Wait for the worker pool to die
+      $log.info "Killing worker threads..."
+      @pool.close
+      @pool.wait
+
+      $log.info "Contacting the server to cancel links..."
       cancel_batch
-      $log.fatal "Done."
+
+
+      # Remove the cache
+      $log.info "Closing pool cache..."
+      cache = @pool.get_datapoints( Store.new() )   #memory cache as a dummy object
+      cache.close
+
+      # Close caches
+      $log.info "Done."
       return
     end
 
@@ -91,12 +114,10 @@ module LWAC
     def get_link
       l = nil
       @link_mutex.synchronize{
-        l = @links[0]
-        @links.delete_at(0)
+        id, l = @links.shift
       }
       return l
     end
-
 
   private
 
@@ -121,7 +142,7 @@ module LWAC
 
     # Grab a batch of links from the server
     def acquire_batch
-      $log.info "Applying for a new batch of #{@config[:client][:batch_capacity]} links..."
+      $log.info "Requesting a new batch of #{@config[:client][:batch_capacity]} links..."
 
       loop do
         ret = connect do |s|
@@ -130,25 +151,28 @@ module LWAC
 
         # If the server tells us to back off, so do.
         if(ret.class == Fixnum)
-          $log.info "Waiting for #{ret}s until #{Time.now + ret} at the server's request."
-          sleep([ret, @config[:network][:maximum_reconnect_time]].min)
+          $log.info "Waiting for #{ret}s until #{Time.now + ret} at the server's request before requesting new batch"
+          @batch_request_delay = Time.now + [ret, @config[:network][:maximum_reconnect_time]].min
+          return 
         elsif(ret.class == Array and ret.length == 2)
 
           # Load the worker config into the list
           policy, links = ret
           @link_mutex.synchronize{
             links.each{ |l|
-              @links << {:link => l, :config => policy}
+              @links[l.id] = {:link => l, :config => policy}
             }
           }
-          $log.info "Received #{@links.length}/#{@config[:client][:batch_capacity]} links from server."
-          return
+          $log.info "Received #{links.length}/#{@config[:client][:batch_capacity]} links from server."
+          return links.length
         else
-          $log.warn "Received unrecognised return from server of type: #{@links.class}.  Retrying..."
+          $log.warn "Received unrecognised return from server of type: #{ret.class}.  Retrying..."
           $log.debug "Server said: '#{ret}'"
           increment_reconnection_timer
         end
       end
+
+      return nil
     end
 
     # Send the batch of datapoints we have currently.
@@ -160,7 +184,7 @@ module LWAC
         # Take them out of the pstore up to a given size limit, then send that chunk
         pending_size = 0.0
         $log.debug "Counting data for upload..."
-        while(datapoints.length > 0) do # and pending_size < @config[:client][:check_in_size]) do
+        while(datapoints.length > 0 and pending_size < @config[:client][:check_in_size]) do
           key = datapoints.keys[0]
           dp = datapoints[key]
           pending_size += dp.response_properties[:downloaded_bytes].to_f / 1024.0 / 1024.0 
@@ -178,18 +202,21 @@ module LWAC
 
       # Here datapoints.length == 0, so wipe the cache
       datapoints.delete_all
+
+      
+    rescue SignalException => se
+      $log.fatal "Caught signal during upload."
+      $log.info "Closing upload cache..."
+      # remove the cache
+      datapoints.close
+      raise se
     end
 
     # Cancel the batch of links we currently have checked out.
     # This atomically aborts these links and frees them up for other clients.
     def cancel_batch
       # return if(@links.class == Fixnum) # just in case we bail whilst waiting
-    
-      # Wait for the worker pool to die
-      $log.info "Killing worker threads..."
-      @pool.close
-      @pool.wait
-
+   
       if @links.empty?
         $log.info "No links to cancel." 
         return
@@ -224,9 +251,6 @@ module LWAC
         # On error
         rescue StandardError => e
           
-          # Simply quit if we have been told to shut down
-          return if @shutdown
-
           # Network Errors
           case e
           when Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
@@ -271,8 +295,12 @@ module LWAC
 
     # Get a new cache to replace the one in the pool
     def new_pool_cache
-      $log.info "Creating cache #{(@config[:client][:cache_file] == nil) ? "in RAM" : "at #{@config[:client][:cache_file]}"}"
-      return Store.new(@config[:client][:cache_file])
+      # Create cache in a random filename in the dir specified
+      filename = nil
+      filename = File.join(@config[:client][:cache_dir], rand.hash.abs.to_s) if @config[:client][:cache_dir]
+
+      $log.info "Creating cache #{(@config[:client][:cache_dir] == nil) ? "in RAM" : "at #{filename}"}"
+      return Store.new(filename)
     end
 
 
@@ -299,6 +327,16 @@ module LWAC
     def compute_reconnection_time 
       # Reset the backoff timer now we have connected successfully
       @rc_time    = Time.now.to_i + @reconnect_timer
+    end
+
+    # Returns a string progress bar for use in output
+    def progress_bar(total, progress, length=25)
+      bar_len = ((progress.to_f / total.to_f) * length).round
+      str = '['
+      str += '=' * [bar_len, length].min
+      str[-1] = ">" if bar_len > length
+      str += ' ' * (length - [bar_len, length].min)
+      str += ']' 
     end
 
   end

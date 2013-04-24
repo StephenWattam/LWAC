@@ -28,10 +28,15 @@ The client's limitations as a system are described here, as well as a way of ide
 
 Clients check out batches of links, process them, then check in smaller batches (since the datapoints now have a large payload).  The ratio of these sizes should be tuned in accordance with the filesizes being uploaded on a regular basis, and the degree of data security one wishes to ensure.
 
+ * `announce_progress` --- Boolean.  Set to true to print worker status to the screen every half second during operation.
  * `uuid_salt` --- A human-readable string to prepend the client UUID with.  Each client computes its ID from the hostname, and this is a way of making the IDs more human-readable (as well as running multiple clients on the same host).
  * `batch_capacity` --- How many links to check out and download in one batch.  The client will receive up to this number of links to download each time it contacts the server.
- * `check_in_size` --- How many datapoints to upload at once, in MB.  Datapoints contain data from the web, and are thus larger/easier to interrupt.
- * `cache_file` --- A filepath to keep web data in before it is pushed to the server.  Reduces client RAM requirements.  If you don't wish to use a file cache (i.e. slow filesystem, much RAM, set this to nil/blank).
+ * `check_in_size` --- How many datapoints to upload at once, in MB.  Set to the `cache_limit` to make uploads go fastest, or below it to split them.
+ * `cache_limit` --- The approximate size of the cache used by the client.  After downloading this amount of data, the cache will be swapped out and uploaded in chunks to the server.
+ * `strict_cache_limit` --- Boolean. if `true`, prevents workers from over-filling the cache.  This has a performance impact on download rate, but is necessary to prevent runaway memory usage if your client frequently has to contact the server.
+ * `cache_dir` --- A directory to create file caches in.  Reduces client RAM requirements, as the cache will store web data before upload.  If you wish to use memory instead, leave this blank.  At most two caches will be active at any one time, meaning memory limits will be:
+   * If using memory caching, `2 * cache_limit + simultaneous_workers * max_body_size`
+   * If using disk caching, `check_in_size + simultaneous_workers * max_body_size`
  * `simultaneous_workers` --- The number of workers to run in the same pool.  Given preferrable network conditions, this many connections to websites will be open at once, and this number must be chosen whilst bearing in mind the limitations of your kernel and netiquette (especially if you have many links pointing at the same servers).  Within each client, links are downloaded from servers by a series of workers, which consume links from the pending pool.  This has the distinct advantage of being capable of very high degrees of parallelism (beyond that where the kernel will start dropping connections) with relatively little overhead.
 
   

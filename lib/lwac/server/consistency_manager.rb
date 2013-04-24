@@ -91,8 +91,8 @@ module LWAC
           # Read from DB
           ids = @storage.read_link_ids(@state.current_sample.last_dp_id.to_i, (number - @links.length))
 
-          # increment the last count
-          @state.current_sample.last_dp_id = ids.max
+          # increment the last count or keep it the same if there were no returns
+          @state.current_sample.last_dp_id = (ids.max || @state.current_sample.last_dp_id)
 
           # put in the links list
           @links += ids

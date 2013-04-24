@@ -22,7 +22,13 @@ module LWAC
     # Should be run in a thread.  Performs work until the dispatcher runs out of data.
     def work(dispatcher)
       loop{
+        return if @abort
         while( work = dispatcher.get_link) do
+
+          # TODO: make this only called if the last run wasn't active too
+          @pool.active(@id)
+
+
           @link    = work[:link]
           @config  = work[:config]
 
@@ -34,8 +40,8 @@ module LWAC
         end
 
         # TODO: configurable
+        @pool.idle(@id)
         sleep(1)
-        return if @abort
       }
       
       puts "{/#{dispatcher}}"
@@ -89,13 +95,17 @@ module LWAC
 
   # -----------------------------------------------------------------------------------------------------
   class WorkerPool
-    def initialize(size, cache, client_id)
+    def initialize(size, cache, cache_limit, strict_cache_limit, client_id)
       @m    = Mutex.new # Data mutex for "producer" status
       @t    = [] #threads
       @w    = [] # workers
+      @idle = []
+      @idle_mutex = Mutex.new
       @size = size.to_i # number of simultaneous workers
       @client_id = client_id      # Who am I working on behalf of?
 
+      @cache_limit  = cache_limit
+      @strict_cache_limit = strict_cache_limit
       @cache_mutex  = Mutex.new
       @cache_size   = 0
       @dp           = cache      # datapoints
@@ -114,6 +124,34 @@ module LWAC
       @global_stats_mutex = Mutex.new
     end
 
+    # Workers can register as active by calling this
+    def active(worker_id)
+      @idle_mutex.synchronize{
+        @idle[worker_id] = false
+      }
+    end
+
+    # Workers can register as idle by calling this
+    def idle(worker_id)
+      @idle_mutex.synchronize{
+        @idle[worker_id] = true
+      }
+    end
+
+    # check to see if all workers are idle
+    def all_idle?
+      @idle_mutex.synchronize{
+        @idle.inject(true){ |m, o| m and o}
+      }
+    end
+
+    # Return the number of idle workers
+    def count_idle
+      @idle_mutex.synchronize{
+        @idle.count(true)
+      }
+    end
+
     # the cache was last swapped out?
     def cache_size 
       @cache_mutex.synchronize{
@@ -127,6 +165,7 @@ module LWAC
       @w = []
       (@size - @w.length).times{|s|
         @w << Worker.new(s, self)
+        @idle[s] = true
       }
       $log.info "#{@w.length} worker[s] created."
     end
@@ -149,7 +188,6 @@ module LWAC
     def wait
       $log.debug "Waiting for #{@t.length} worker[s] to close."
       @t.each{|t| t.join}
-      @end_time = Time.now
       $log.info "Workers all terminated naturally."
     end
 
@@ -170,6 +208,12 @@ module LWAC
       return old_dp
     end
 
+    def count_datapoints
+      @cache_mutex.synchronize{
+        @dp.length
+      }
+    end
+
     # Summarise the progress after a sample.
     def summarise
       $log.info "Queue complete."
@@ -180,9 +224,10 @@ module LWAC
       $log.info "  Errors   : #{@errors}"
       $log.info "  Complete : #{@complete}"
 
-      if @start_time and @end_time then
-        rate = @bytes*8 / (@end_time - @start_time)
-        $log.info "Downloaded #{(@bytes.to_f / 1024.0 / 1024.0).round(2)}MB in #{(@end_time - @start_time).round}s (#{(rate / 1024 / 1024).round(2)}Mbps)"
+      if @start_time then
+        now = Time.now
+        rate = @bytes*8 / (now - @start_time)
+        $log.info "Downloaded #{(@bytes.to_f / 1024.0 / 1024.0).round(2)}MB in #{(now - @start_time).round}s (#{(rate / 1024 / 1024).round(2)}Mbps)"
       end
     end
 
@@ -191,7 +236,6 @@ module LWAC
       @t.each{|t|
         t.kill
       }
-      @end_time = Time.now
       $log.info "Worker threads killed."
     end
 
@@ -201,8 +245,29 @@ module LWAC
       @w.each{|w|
         w.close
       }
-      @end_time = Time.now
       $log.info "Workers closed by request."
+    end
+
+    # Returns true if the cache is full and workers are waiting to put things into it
+    def cache_limit_reached?
+      @cache_mutex.synchronize{
+        @cache_size >= @cache_limit
+      }
+    end
+
+    # Add a datapoint to the cache, and delay if the limit has been reached.
+    def add_to_cache(datapoint, approx_size)
+
+      if @strict_cache_limit then
+        while(cache_limit_reached?)
+          sleep(0.5)
+        end
+      end
+
+      @cache_mutex.synchronize{
+        @dp[datapoint.link.id] = datapoint
+        @cache_size   += approx_size
+      }
     end
 
     # ---------- called by workers below this line
@@ -285,9 +350,8 @@ module LWAC
                                }
 
         # write to datapoint list
-        @cache_mutex.synchronize{
-          @dp[link.id] = DataPoint.new(link, headers, head, body, response_properties, @client_id, nil)
-        }
+        dp = DataPoint.new(link, headers, head, body, response_properties, @client_id, nil)
+        add_to_cache(dp, res.downloaded_bytes.to_i)
         
         # Update stats counters.
         @global_stats_mutex.synchronize{
@@ -299,12 +363,6 @@ module LWAC
           @complete     += 1
           @bytes        += res.downloaded_bytes.to_i
         }
-
-        # Update cache size estimate
-        @cache_mutex.synchronize{
-          @cache_size   += res.downloaded_bytes.to_i
-        }
-
 
       rescue SignalException => e
         $log.fatal "Signal caught: #{e.message}"
@@ -320,9 +378,8 @@ module LWAC
         end
 
         # write to datapoint list
-        @cache_mutex.synchronize{
-          @dp[link.id] = DataPoint.new(link, "", "", "", {}, @client_id, "#{e}") 
-        }
+        dp = DataPoint.new(link, "", "", "", {}, @client_id, "#{e}") 
+        add_to_cache(dp, 0)
 
         # update the counter.
         @global_stats_mutex.synchronize{ @errors += 1 }

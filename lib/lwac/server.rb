@@ -41,6 +41,7 @@ module LWAC
         # Else, check out some new ones
         links = @cm.check_out(request)
         links.each{|l|
+          # puts "####################### #{l.id}" if @dispatched[client_id][l.id]
           @dispatched[client_id][l.id] = l
         }
       # end
@@ -87,6 +88,7 @@ module LWAC
           check_in_list << dp
           @dispatched[client_id].delete(dp.link.id)
         else
+          # puts "***************************** #{dp}"
           erroneous += 1 
         end
       }
