@@ -9,9 +9,10 @@ Gem::Specification.new do |s|
   s.email       = 'stephenwattam@gmail.com'
   s.homepage    = 'http://stephenwattam.com/projects/LWAC'
   s.required_ruby_version =  ::Gem::Requirement.new(">= 1.9")
+  s.license     = 'CC-BY-NC-SA 3.0' # Creative commons by-nc-sa 3
   
   # Files + Resources
-  s.files         = Dir.glob("resources/schemata/*") + Dir.glob("doc/*") + Dir.glob("example_config/*.yml") + 
+  s.files         = ["LICENSE"] + Dir.glob("resources/schemata/*") + Dir.glob("doc/*") + Dir.glob("example_config/*.yml") + 
                     Dir.glob("lib/*/*/*.rb") +
                     Dir.glob("lib/*/*.rb") +
                     Dir.glob("lib/*.rb") 

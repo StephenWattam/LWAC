@@ -34,14 +34,16 @@ If you can write code, feel free to submit a patch or contact me for your own br
 
 License and Usage Conditions
 ----------------------------
-I consider LWAC open source for personal, educational, and "semi-commercial" use on condition that you:
+LWAC is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License](http://creativecommons.org/licenses/by-nc-sa/3.0/), a copy of which may be found in the `LICENSE` file in the root of the distribution.
 
- * Do not make money from directly selling the code (including as part of something else).
- * Do not make money from selling corpora built using LWAC without first [contacting me for permission](http://stephenwattam.com/contact/).  I'll probably say yes.
- * Credit LWAC and provide a link to [http://stephenwattam.com/project/LWAC/](http://stephenwattam.com/project/LWAC/) or [ucrel.lancs.ac.uk/LWAC/](ucrel.lancs.ac.uk/LWAC/) in any publications (You can also cite the paper pending for WaC8, once it's published).
- * Don't use it as a DDOS system.
+In addition to the creative commons terms above, I wish to mandate the following conditions: You must...
+
+ * Not profit from directly selling the code (including as part of something else);
+ * Not profit from selling corpora built using LWAC.  (Note that I will probably grant permission if contacted, I merely wish to stop people turning it into a commercial service);
+ * Credit LWAC and provide a link to [http://stephenwattam.com/project/LWAC/](http://stephenwattam.com/project/LWAC/) or [ucrel.lancs.ac.uk/LWAC/](http://ucrel.lancs.ac.uk/LWAC/) in any publications (You can also cite the paper pending for WaC8, once it's published);
+ * Not use it to DDOS things.
 
 Other than that, knock yourself out.  The code's fairly clean, and fairly well documented.
 
-
+It's worth noting here that the data you download from the web is probably copyright to some third party who wouldn't necessarily consent to its distribution.  Laws on the use of web data vary wildly and are a grey area in many juristrictions, so _caveat emptor_ (or _caveat corpus aedificator_).
 

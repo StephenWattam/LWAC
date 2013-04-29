@@ -12,13 +12,18 @@ input_dir = "./user/*"
 output_dir = "./html_docs"
 TEMPLATE = "template.rhtml"
 
+# for version
+require '../lib/lwac.rb'
+
+
+
 if File.exist?(output_dir) then
     $stderr.puts "Output directory exists (#{output_dir}) --- please delete and run again."
     exit(1)
 end
 
 
-def template(filename, content, pages)
+def template(version, filename, content, pages)
   return ERB.new(File.read(TEMPLATE)).result(binding)
 end
 
@@ -35,7 +40,7 @@ Dir.glob(input_dir){|f|
     puts "Compiling #{f}..."
 
     File.open(File.join(output_dir, File.basename(f)[0..-(File.extname(f).length + 1)] + ".html"), 'w'){|of|      
-      of.write( template(f, Markdown.new(File.read(f)).to_html, pages ))
+      of.write( template(LWAC::VERSION, File.basename(f), Markdown.new(File.read(f)).to_html, pages ))
     }
   elsif f != $0 and File.basename(f) != File.basename(output_dir)
     puts "Copying #{f}..."
