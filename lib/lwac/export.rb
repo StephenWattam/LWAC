@@ -132,9 +132,7 @@ class Exporter
                             }
               
                 data.datapoint = Resource.new("datapoint", datapoint)
-                puts data.describe
-
-
+                # puts data.describe
 
 
                 # Filter out individual datapoints if necessary

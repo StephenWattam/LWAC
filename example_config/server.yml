@@ -20,8 +20,8 @@
       :uri: uri                       # The field with the URIs in it is called 'uri' by default
 :sampling_policy:               # Defines sampling times
   :sample_limit:  0               # Stop at the nth sample (or refuse to sample if n is already over this!)
-  :sample_time: 60                # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
-  :sample_alignment: 0            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
+  :sample_time: 43200              # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
+  :sample_alignment: 28800            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:
   :dry_run: false                    # Don't actually do any downloading if set to true
     # ----
@@ -63,7 +63,7 @@
   :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
   :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
 :server:                        # Network server properties
-  :interface: 127.0.0.1         # The interface to listen on
+  :interface:          # The interface to listen on
   :port: 27400                  # The port to listen on
   :serialiser:  :marshal                  # :marshal, :json, :msgpack, :yaml.  :marshal highly recommended.
 :logging:                       # Logging and output options

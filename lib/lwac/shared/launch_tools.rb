@@ -53,15 +53,17 @@ module LWAC
 
     # Then, create global log
     logdevs = []
-    config[:logging][:logs].each{|name, ldopts| 
-      # Construct the log
-      ld            = {:name => name}
-      ld[:dev]      = %w{STDOUT STDERR}.include?(ldopts[:dev]) ? eval(ldopts[:dev]) : ldopts[:dev] || STDOUT
-      ld[:level]    = ldopts[:level]
+    if config[:logging] and config[:logging][:logs].is_a?(Hash)
+      config[:logging][:logs].each{|name, ldopts| 
+        # Construct the log
+        ld            = {:name => name}
+        ld[:dev]      = %w{STDOUT STDERR}.include?(ldopts[:dev]) ? eval(ldopts[:dev]) : ldopts[:dev] || STDOUT
+        ld[:level]    = ldopts[:level]
 
-      # Add to the list of logs
-      logdevs << ld
-    }
+        # Add to the list of logs
+        logdevs << ld
+      }
+    end
     $log = MultiOutputLogger.new(logdevs, config[:logging][:progname])
 
     

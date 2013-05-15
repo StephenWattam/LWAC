@@ -4,12 +4,16 @@ module LWAC
   # Add the ability to log to many devices, one for posterity and one for cron.
   class MultiOutputLogger < Logger
 
+    # Default log level
+    DEFAULT_LEVEL = Logger::UNKNOWN
+
     # Create a simple log object with one log level and one device
     def initialize(logdevs = {}, progname=nil, shift_age = 0, shift_size = 1048576)
       super(nil, shift_age, shift_size)
       @progname     = progname
       @shift_age    = shift_age
       @shift_size   = shift_size
+      @lowest_level = DEFAULT_LEVEL
       configure_logs(logdevs)
     end
 
@@ -23,7 +27,7 @@ module LWAC
 
       # If the user provides a device then set up a single log as :log
       if not logdevs.class == Array then
-        @logdevs[:default]    = {:dev => logdevs, :level => @level}
+        @logdevs[:default]    = {:dev => logdevs, :level => DEFAULT_LEVEL}
         @lowest_level         = @logdevs[:default][:level]
         return
       end
@@ -32,7 +36,7 @@ module LWAC
       logdevs.each{|ld|
         name        = ld[:name]         ||= :default
         dev         = ld[:dev]          ||= $stdout
-        level       = ld[:level]        ||= @level
+        level       = ld[:level]        ||= DEFAULT_LEVEL
         shift_age   = ld[:shift_age]    ||= @shift_age
         shift_size  = ld[:shift_size]   ||= @shift_size
         level       = MultiOutputLogger.string_to_level(level) if level.class != Fixnum 

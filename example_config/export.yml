@@ -49,7 +49,7 @@
   :logs:                                # List of logs
     :default:                             # Log name 'default'
       :dev: STDOUT                          # File to log to, or 'STDOUT', or 'STDERR'
-      :level: :debug                         # Level to log.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :info                         # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              
