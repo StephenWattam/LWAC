@@ -2,7 +2,12 @@
 :server_config: example_config/server.yml     # Export reads the storage config from a server.  Point this at the server config.
 :output:                              # Output config, which is pretty much everything
   :announce: 2000                       # Every nth line, update the UI
-  :filename: export.csv                 # Write to this file
+  :filename: export.csv                 # Write to this file or directory, depending on exporter system
+
+  :formatter: :multitemplate                      # :csv for single-file csv output, :multicsv for one-csv-per-point, :multitemplate for one-erb-per-point
+  :formatter_opts:
+    :filename: :sample_id               # Multicsv and template option.  Select filename from one of the keys in the line
+    :template: example_config/export_template.erb
   :headers: true                        # Output CSV headers?
   :level: :datapoint                    # output one line per :server, :sample or :datapoint
                                         #   note that if you select :server, all the

@@ -170,7 +170,7 @@ module LWAC
     #                      non-missing, default is simply true",
     #                      :missing => "value for when it's missing, default is """ }
     def self.produce_output_line( data, format )
-      line = []
+      line = {}
      
       current = nil
       format.each{|f, v|
@@ -195,7 +195,7 @@ module LWAC
         end
 
         # add to line
-        line << val
+        line[f] = val
       }
       current = nil
 

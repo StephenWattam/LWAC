@@ -1,0 +1,36 @@
+<%
+    require 'uri'
+    require 'cgi'
+
+# URLencoding
+def u(str)
+  return URI::encode(str.to_s)
+end
+
+# HTML encoding
+def h(str)
+  return CGI.escapeHTML(str.to_s)
+end
+
+
+
+%>
+
+<html>
+    <head>
+        <title>Export Template (File: <%=h filename%></title>
+    </head>
+    <body>
+        <h1>Exported Info</h1>
+        <hr/>
+        <p>This file is the result of a template export from LWAC.  It's just a placeholder that can accept any data (so you're still free to mess with the configs whilst trying this out.</p>
+
+        <h2>Summary of Data</h2>
+        <dl>
+            <% line.each{|k, v| %> 
+                <dt><%=h k%></dt><dd><%=h v%></dd>
+            <% } %>
+        </dl>
+    </body>
+
+</html>

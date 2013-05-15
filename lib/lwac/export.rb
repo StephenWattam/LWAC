@@ -2,15 +2,24 @@
 require 'lwac/server/storage_manager'
 require 'lwac/export/output_formatter'
 require 'lwac/export/resources'
-require 'csv'
+require 'lwac/export/format'
 
 module LWAC
 
 class Exporter
 
+  # Points at the various formatter objects available
+  AVAILABLE_FORMATTERS = {
+    :csv            => CSVFormatter,
+    :multicsv       => MultiCSVFormatter,
+    :multitemplate  => MultiTemplateFormatter
+  }
+
   def initialize(config)
     @config = config
 
+    @formatter = eval("#{AVAILABLE_FORMATTERS[@config[:output][:formatter]]}.new( @config[:output][:filename], @config[:output][:formatter_opts] )")
+    
     prepare_filters
     prepare_formatters
     
@@ -37,130 +46,127 @@ class Exporter
     progress  = [count, Time.now]
 
 
-    # Open the CSV
+    # Open the output system 
     $log.debug "Opening #{@config[:output][:filename]} for writing..."
-    CSV.open(@config[:output][:filename], 'w') do |csv_out|
+    @formatter.open_output
+
+    # Write headers
+    if @config[:output][:headers]
+      $log.debug "Writing headers (line #{count+=1}/#{@estimated_lines})."
+      @formatter.write_header( @config[:output][:format].keys )
+      progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce])
+    end 
+
+    
+    # -----------------------------------------------------------------------------
+    # Construct the server (static) resource
+    $log.debug "Constructing server resource..."
+    server = {:links                  => @storage.read_link_ids.to_a,
+              :complete_sample_count  => @available_samples.length,
+              :complete_samples       => @available_samples.map{|as| as.id},
+              :next_sample_date       => @storage.state.next_sample_due,
+              :current_sample_id      => @storage.state.current_sample.id,
+              :config                 => @server_config,
+              :version                => @storage.state.version
+             }
+    data.server = Resource.new("server", server)
+    #puts server.describe
 
 
-
-      # Write headers
-      if @config[:output][:headers]
-        $log.debug "Writing headers (line #{count+=1}/#{@estimated_lines})."
-        csv_out << @config[:output][:format].keys
-        progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce])
-      end 
-
-      
+    
+    # If we wish to output at the server level, do so.
+    if(@config[:output][:level] == :server) then
+        # output at server level
+        $log.debug "Writing output at server level (line #{count+=1}/#{@estimated_lines})."
+        @formatter << OutputFormatter::produce_output_line( data, @config[:output][:format] )
+        progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce]).values
+    else
+      # ...continue to sample at a lower level
       # -----------------------------------------------------------------------------
-      # Construct the server (static) resource
-      $log.debug "Constructing server resource..."
-      server = {:links                  => @storage.read_link_ids.to_a,
-                :complete_sample_count  => @available_samples.length,
-                :complete_samples       => @available_samples.map{|as| as.id},
-                :next_sample_date       => @storage.state.next_sample_due,
-                :current_sample_id      => @storage.state.current_sample.id,
-                :config                 => @server_config,
-                :version                => @storage.state.version
-               }
-      data.server = Resource.new("server", server)
-      #puts server.describe
-
-
-      
-      # If we wish to output at the server level, do so.
-      if(@config[:output][:level] == :server) then
-          # output at server level
-          $log.debug "Writing output at server level (line #{count+=1}/#{@estimated_lines})."
-          csv_out << OutputFormatter::produce_output_line( data, @config[:output][:format] )
-          progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce])
-      else
-        # ...continue to sample at a lower level
-        # -----------------------------------------------------------------------------
-        # One level deep, loop through samples and construct their resource
-        $log.debug "Constructing sample resources..."
-        @available_samples.each{|as|
-          sample = {:id                   => as.id,
-                    :start_time           => as.sample_start_time,
-                    :end_time             => as.sample_end_time,
-                    :complete             => as.complete?,
-                    :open                 => as.open?,
-                    :size                 => as.size,
-                    :duration             => (as.sample_end_time && as.sample_start_time) ? as.sample_end_time - as.sample_start_time : 0,
-                    :start_time_s         => as.sample_start_time.to_i,
-                    :end_time_s           => as.sample_end_time.to_i,
-                    # :num_pending_links    => as.pending.length,
-                    # Either form takes way too long to compute on large servers
-                    # :pending_links        => data.server.links - (data.server.links.clone.delete_if{|x| x > as.last_dp_id} - as.pending.to_a),
-                    # :pending_links        => data.server.links.clone.to_a.delete_if{|id| (not as.pending.to_a.include?(id)) or (id > as.last_dp_id) },
-                    :size_on_disk         => as.approx_filesize,
-                    :last_contiguous_id   => as.last_dp_id,
-                    :dir                  => @storage.get_sample_filepath(as.id),
-                    :path                 => File.join(@storage.get_sample_filepath(as.id), @server_config[:storage][:sample_filename]) 
-                   }
-          data.sample = Resource.new("sample", sample)
-          # puts data.describe
+      # One level deep, loop through samples and construct their resource
+      $log.debug "Constructing sample resources..."
+      @available_samples.each{|as|
+        sample = {:id                   => as.id,
+                  :start_time           => as.sample_start_time,
+                  :end_time             => as.sample_end_time,
+                  :complete             => as.complete?,
+                  :open                 => as.open?,
+                  :size                 => as.size,
+                  :duration             => (as.sample_end_time && as.sample_start_time) ? as.sample_end_time - as.sample_start_time : 0,
+                  :start_time_s         => as.sample_start_time.to_i,
+                  :end_time_s           => as.sample_end_time.to_i,
+                  # :num_pending_links    => as.pending.length,
+                  # Either form takes way too long to compute on large servers
+                  # :pending_links        => data.server.links - (data.server.links.clone.delete_if{|x| x > as.last_dp_id} - as.pending.to_a),
+                  # :pending_links        => data.server.links.clone.to_a.delete_if{|id| (not as.pending.to_a.include?(id)) or (id > as.last_dp_id) },
+                  :size_on_disk         => as.approx_filesize,
+                  :last_contiguous_id   => as.last_dp_id,
+                  :dir                  => @storage.get_sample_filepath(as.id),
+                  :path                 => File.join(@storage.get_sample_filepath(as.id), @server_config[:storage][:sample_filename]) 
+                 }
+        data.sample = Resource.new("sample", sample)
+        # puts data.describe
 
 
 
 
-          # If this sample is filtered out, ignore it regardless of sampling level
-          if(OutputFormatter::filter(data, @config[:output][:filters][:sample])) then
-            # If we wish to sample at the sample level, do so
-            if(@config[:output][:level] == :sample) then
-                # output at server level
-                $log.debug "Writing output at sample level (line #{count+=1}/#{@estimated_lines})."
-                csv_out << OutputFormatter::produce_output_line( data, @config[:output][:format] )
-            else
-              # ...continue and build more info
-              # -----------------------------------------------------------------------------
-              # Two levels deep, loop through datapoints and construct their resources.
-              $log.debug "Constructing datapoint resources..."
-              data.server.links.each{|link_id|
-                # Load from disk
-                dp = @storage.read_datapoint( link_id, as )
+        # If this sample is filtered out, ignore it regardless of sampling level
+        if(OutputFormatter::filter(data, @config[:output][:filters][:sample])) then
+          # If we wish to sample at the sample level, do so
+          if(@config[:output][:level] == :sample) then
+              # output at server level
+              $log.debug "Writing output at sample level (line #{count+=1}/#{@estimated_lines})."
+              @formatter << OutputFormatter::produce_output_line( data, @config[:output][:format] )
+          else
+            # ...continue and build more info
+            # -----------------------------------------------------------------------------
+            # Two levels deep, loop through datapoints and construct their resources.
+            $log.debug "Constructing datapoint resources..."
+            data.server.links.each{|link_id|
+              # Load from disk
+              dp = @storage.read_datapoint( link_id, as )
 
-                datapoint = {:id            => dp.link.id     || "",
-                             :uri           => dp.link.uri    || "",
-                             :dir           => File.dirname(@storage.get_dp_filepath(link_id, data.sample.id)), 
-                             :path          => @storage.get_dp_filepath(link_id, data.sample.id),
-                             :client_id     => dp.client_id   || "",
-                             :error         => dp.error       || "",
-                             :headers       => dp.headers     || {},
-                             :head          => dp.head        || "",
-                             :body          => dp.body        || "",
-                             :response      => dp.response_properties || {}
-                            }
-              
-                data.datapoint = Resource.new("datapoint", datapoint)
-                # puts data.describe
-
-
-                # Filter out individual datapoints if necessary
-                if(OutputFormatter::filter(data, @config[:output][:filters][:datapoint])) then
-                  # At this point we are at the finest-grained output possible, so
-                  # just output!
-                  $log.debug "Writing output at datapoint level (line #{count+=1}/#{@estimated_lines})."
-                  csv_out << OutputFormatter::produce_output_line( data, @config[:output][:format] )
-                  progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce] )
-                else
-                  @estimated_lines -= 1
-                  $log.info "Discarded datapoint #{data.datapoint.id} due to filter (revised estimate: #{@estimated_lines} lines)."
-                end
-              } # end per-datapoint loop
-            end # end sample if
+              datapoint = {:id            => dp.link.id     || "",
+                           :uri           => dp.link.uri    || "",
+                           :dir           => File.dirname(@storage.get_dp_filepath(link_id, data.sample.id)), 
+                           :path          => @storage.get_dp_filepath(link_id, data.sample.id),
+                           :client_id     => dp.client_id   || "",
+                           :error         => dp.error       || "",
+                           :headers       => dp.headers     || {},
+                           :head          => dp.head        || "",
+                           :body          => dp.body        || "",
+                           :response      => dp.response_properties || {}
+                          }
+            
+              data.datapoint = Resource.new("datapoint", datapoint)
+              # puts data.describe
 
 
-          else # else filter out this sample
-            @estimated_lines -= data.sample.size
-            $log.info  "Discarded sample #{data.sample.id} due to filter (revised estimate: #{@estimated_lines} lines)."
-          end # end filter IF
+              # Filter out individual datapoints if necessary
+              if(OutputFormatter::filter(data, @config[:output][:filters][:datapoint])) then
+                # At this point we are at the finest-grained output possible, so
+                # just output!
+                $log.debug "Writing output at datapoint level (line #{count+=1}/#{@estimated_lines})."
+                @formatter << OutputFormatter::produce_output_line( data, @config[:output][:format] )
+                progress = OutputFormatter::announce(count, progress, @estimated_lines, @config[:output][:announce] )
+              else
+                @estimated_lines -= 1
+                $log.info "Discarded datapoint #{data.datapoint.id} due to filter (revised estimate: #{@estimated_lines} lines)."
+              end
+            } # end per-datapoint loop
+          end # end sample if
 
 
-        } # end per-sample loop 
-        end # end server if
+        else # else filter out this sample
+          @estimated_lines -= data.sample.size
+          $log.info  "Discarded sample #{data.sample.id} due to filter (revised estimate: #{@estimated_lines} lines)."
+        end # end filter IF
 
-    $log.debug "Closing CSV"
-    end # end CSV block
+
+      } # end per-sample loop 
+      end # end server if
+
+    @formatter.close_output
     $log.info "Done."
   end
 
