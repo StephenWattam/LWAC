@@ -4,153 +4,12 @@ require 'lwac/shared/serialiser'
 require 'lwac/shared/identity'
 require 'lwac/shared/multilog'
 require 'lwac/shared/data_types'
+require 'lwac/server/db_conn'
 
-require 'yaml'
-require 'sqlite3'
 require 'fileutils'
 require 'set'
 
 module LWAC
-
-  # Generically handles an sqlite3 database with a slightly cleaner API
-  # than raw SQL.
-  class DatabaseConnection
-    attr_reader :dbpath
-
-    # Create a new connection to a database at dbpath.
-    def initialize(dbpath, transaction_limit=100, pragma={})
-      @transaction        = false
-      @transaction_limit  = transaction_limit
-      @transaction_count  = 0
-      connect( dbpath )
-      configure( pragma )
-    end
-
-    # Disconnect from the database.
-    def close
-      disconnect
-    end
-
-    # Set the underlying SQLite3 object's propensity to return results
-    # as a hash
-    def results_as_hash= bool
-      @db.results_as_hash = bool
-    end
-
-    # Is the database set up to return results as a hash?
-    def results_as_hash
-      @db.results_as_hash
-    end
-
-
-    # Run an SQL insert call on a given table, with a hash of data.
-    def insert(table_name, value_hash)
-      raise "Attempt to insert 0 values into table #{table_name}" if value_hash.length == 0
-
-      escaped_values = [] 
-      value_hash.each{|k, v| escaped_values << escape(v) }
-
-      return execute("insert into `#{table_name}` (#{value_hash.keys.join(",")}) values (#{escaped_values.join(",")});")
-    end
-
-
-    # Run an SQL insert call on a given table, with a hash of data.
-    def update(table_name, value_hash, where_conditions = "")
-      # Compute the WHERE clause.
-      where_conditions = "where #{where_conditions}" if where_conditions.length > 0
-
-      # Work out the SET clause
-      escaped_values = []
-      value_hash.each{|k, v| 
-        escaped_values << "#{k}='#{escape(v)}'" 
-      }
-
-      return execute("update `#{table_name}` set #{escaped_values.join(", ")} #{where_conditions};")
-    end
-
-
-    # Select certain fields from a database, with certain where field == value.
-    #
-    # Returns a record set (SQlite3)
-    # 
-    # table_name is the name of the table from which to select.
-    # fields_list is an array of fields to return in the record set
-    # where_conditions is a string of where conditions. Careful to escape!!
-    def select(table_name, fields_list, where_conditions = "")
-      where_conditions = "where #{where_conditions}" if where_conditions.length > 0
-      return execute("select #{fields_list.join(",")} from `#{table_name}` #{where_conditions};")
-    end
-
-
-    # Delete all items from a table
-    def delete(table_name, where_conditions = "")
-      where_conditions = "where #{where_conditions}" if where_conditions.length > 0
-      return execute("delete from `#{table_name}` #{where_conditions};")
-    end
-
-
-    # Execute a raw SQL statement
-    # Set trans = false to force and disable transactions
-    def execute(sql, trans=true)
-      start_transaction if trans
-      end_transaction if @transaction and not trans 
-
-      $log.debug "SQL: #{sql}"
-
-
-      # run the query
-      #puts "<#{sql.split()[0]}, #{trans}, #{@transaction}>"
-      res = @db.execute(sql)
-      @transaction_count += 1 if @transaction
-
-      # end the transaction if we have called enough statements
-      end_transaction if @transaction_count > @transaction_limit
-
-      return res
-    end
-    
-  private
-    def escape( str ) 
-      "'#{SQLite3::Database::quote(str.to_s)}'"
-    end
-
-    def connect( dbpath )
-      # Reads data from the command line, and loads it
-      raise "Cannot access database #{dbpath}" if not File.readable_real?(dbpath)
-      
-      # If the db file is readable, open it.
-      @dbpath = dbpath
-      @db = SQLite3::Database.new(dbpath)
-    end
-
-    def configure( pragma )
-      pragma.each{|pragma, value| 
-        execute("PRAGMA #{pragma}=#{value};", false) # execute without transactions
-      }
-    end
-
-    def disconnect
-      end_transaction if @transaction
-      @db.close
-    end
-    
-    def start_transaction
-      if not @transaction
-        @db.execute("BEGIN TRANSACTION;") 
-        @transaction = true
-      end
-    end
-
-    def end_transaction
-      if @transaction then
-        @db.execute("COMMIT TRANSACTION;") 
-        @transaction_count = 0
-        @transaction = false
-      end
-    end
-  end
-
-
 
 
 
@@ -158,15 +17,22 @@ module LWAC
   #
   # By default this is read-only, as all but the import tool should not be able
   # to edit the database.
-  class DatabaseStorageManager < DatabaseConnection
+  class DatabaseStorageManager
     def initialize(config, read_only=true)
-      $log.debug "Connecting to database at #{config[:filename]}"
-      super(config[:filename], config[:transaction_limit], config[:pragma])
-      $log.debug "Connected to database at #{config[:filename]}"
+      
+      
+      $log.debug "Connecting to #{config[:engine]} database..."
+      klass = case(config[:engine])
+              when :mysql
+                MySQLDatabaseConnection
+              else
+                SQLite3DatabaseConnection
+              end
+      @db = klass.new( config[:engine_conf] )
+      $log.debug "Connected to database."
 
       # Set config, hash as default      
       @config             = config
-      results_as_hash     = true
 
       # Read-only mode designed for servers.
       @read_only          = read_only
@@ -175,7 +41,7 @@ module LWAC
     # Insert a link
     def insert_link(uri)
       raise "Attempt to insert link whilst in read-only mode." if @read_only
-      insert(@config[:table], {"uri" => uri})
+      @db.insert(@config[:table], {"uri" => uri})
     end
 
     # Retrieve a list of links from the db
@@ -183,30 +49,30 @@ module LWAC
       where = ""
       where = "#{@config[:fields][:id]} < #{range_high} AND #{@config[:fields][:id]} > #{range_low}" if range_low and range_high
 
-      links = select(@config[:table], @config[:fields].values, where)
+      links = @db.select(@config[:table], @config[:fields].values, where)
       links.map!{|id, uri| Link.new(id, uri) }
     end
 
     # Read all the link IDs
-    # TODO
+    # TODO --- what if lowest ID is below 0?
     def read_link_ids(from=0, n=nil)
       where = "id > #{from.to_i}" 
       where += " limit #{n}" if n
       
-      ids = select(@config[:table], [@config[:fields][:id]], where).flatten
+      ids = @db.select(@config[:table], [@config[:fields][:id]], where).flatten
       return Set.new(ids)
     end
 
     # Retrieve a single link with a given ID
     def read_link(id)
-      link = select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} == #{id}")
+      link = @db.select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} == #{id}")
       return Link.new(link[0][0], link[0][1])
     end
 
     # Retrieve many links from an array of IDs
     def read_links_from_array(ids = [])
       links = []
-      select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} in (#{ids.join(',')})").each{|l|
+      @db.select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} in (#{ids.join(',')})").each{|l|
         links << Link.new(l[0], l[1])
       }
 
@@ -221,8 +87,12 @@ module LWAC
         where = "#{@config[:fields][:id]} > #{min_id}"
       end
 
-      count = select(@config[:table], ["count(*)"], where)
+      count = @db.select(@config[:table], ["count(*)"], where)
       return count[0][0].to_i
+    end
+
+    def close
+      @db.close
     end
   end
 
@@ -248,7 +118,6 @@ module LWAC
       @serialiser = Serialiser.new(config[:serialiser])
 
       # Database storage
-      config[:database][:filename] = File.join(config[:root], config[:database][:filename])
       @db = DatabaseStorageManager.new(config[:database])
 
       # Try to load the current server state

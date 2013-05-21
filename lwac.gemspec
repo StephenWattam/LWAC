@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.license     = 'CC-BY-NC-SA 3.0' # Creative commons by-nc-sa 3
   
   # Files + Resources
-  s.files         = ["LICENSE"] + Dir.glob("resources/schemata/*") + Dir.glob("doc/*") + Dir.glob("example_config/*.yml") + 
+  s.files         = ["LICENSE"] + Dir.glob("resources/schemata/*/*") + Dir.glob("doc/*") + Dir.glob("example_config/*.yml") + 
                     Dir.glob("lib/*/*/*.rb") +
                     Dir.glob("lib/*/*.rb") +
                     Dir.glob("lib/*.rb") 
@@ -29,6 +29,7 @@ Gem::Specification.new do |s|
   # Deps
   s.add_runtime_dependency 'curb',          '~> 0.8'
   s.add_runtime_dependency 'sqlite3',       '~> 1.3'
+  s.add_runtime_dependency 'mysql2',        '~> 0.3'
   s.add_runtime_dependency 'simplerpc',     '~> 0.1'
 
   # Misc

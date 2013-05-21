@@ -1,7 +1,7 @@
 ---
 :server:                                # Options affecting which server to use
   :address: "127.0.0.1"                   # IP or hostname
-  :port: 27400                            # Port
+  :port: 27401                            # Port
   :serialiser:  :marshal                  # :marshal, :json, :msgpack, or :yaml.  :marshal highly recommended.
 :network:                               # Network behaviour when talking to the server
   :connect_timeout: 20                    # How long we give the socket to respond

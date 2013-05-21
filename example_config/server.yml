@@ -1,20 +1,35 @@
 ---
 :storage:                       # Options affecting the data storage engine
-  :root: corpus                   # A path to the corpus directory  (root/)
+  :root: corpus2                   # A path to the corpus directory  (root/)
   :state_file: state          # What to call the file where server state is stored  (root/state_file)
   :sample_subdir: samples         # Where to keep samples (root/sample_subdir)
   :sample_filename: sample    # What to call each file (root/sample_subdir/id/sample.yml
   :files_per_dir: 1000            # How many files to store in each directory (root/sample_subdir/id/XX/)
   :serialiser:  :marshal          # :marshal, :json or :yaml.  :marshal is faster but :yaml can be read by other languages [:msgpack is pending]
   :database:                      # Config options affecting the metadata database
-    :filename: links.db             # Name of the database, relative to corpus root (root/filename)
+    :engine: :mysql              # :sqlite or :mysql
+    # :engine_conf:
+    #   :filename: corpus2/links.db      # Name of the database, relative to corpus root (root/filename)
+    #   :transaction_limit: 100         # How many requests per transaction.  Larger numbers yield a speed boost at the expense of data security and memory use.
+    #   :pragma:                        # Custom pragmas.  See SQLite's docs.  Default settings yield speed and fair data security
+    #     "locking_mode": "EXCLUSIVE"     # Do not allow others to access the db when the server is running
+    #     "cache_size": 20000             # Allow a large cache
+    #     "synchronous": 0                # Asynchronous operations speed things up a lot
+    #     "temp_store": 2                 # Use temp storage
+    :engine_conf:                       # Options from https://github.com/brianmario/mysql2
+      :username: lwac
+      :password: lwacpass
+      # :host: localhost
+      # :port: 3345
+      :socket: /var/run/mysqld/mysqld.sock
+      :database: lwac
+      :encoding: 'utf8'
+      :read_timeout: 10 #seconds,
+      :write_timeout: 10 #seconds,
+      :connect_timeout: 10 #seconds,
+      :reconnect: true #/false,
+      :local_infile: true #/false,
     :table: links                   # The name of the links table within the sqlite db
-    :transaction_limit: 100         # How many requests per transaction.  Larger numbers yield a speed boost at the expense of data security and memory use.
-    :pragma:                        # Custom pragmas.  See SQLite's docs.  Default settings yield speed and fair data security
-      "locking_mode": "EXCLUSIVE"     # Do not allow others to access the db when the server is running
-      "cache_size": 20000             # Allow a large cache
-      "synchronous": 0                # Asynchronous operations speed things up a lot
-      "temp_store": 2                 # Use temp storage
     :fields:                        # Fields for the link table:
       :id: id                         # The ID field is called 'id' by default  
       :uri: uri                       # The field with the URIs in it is called 'uri' by default
@@ -64,14 +79,14 @@
   :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
 :server:                        # Network server properties
   :interface:          # The interface to listen on
-  :port: 27400                  # The port to listen on
+  :port: 27401                  # The port to listen on
   :serialiser:  :marshal                  # :marshal, :json, :msgpack, :yaml.  :marshal highly recommended.
 :logging:                       # Logging and output options
   :progname: Server               # What to call the app in logs
   :logs:                          # A list of log outputs
     :default:                       # Call this log "default"
       :dev: STDOUT                  # Where to log.  Give a filename, or use 'STDOUT' or 'STDERR'
-      :level: :info                # Level to log.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :debug                # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

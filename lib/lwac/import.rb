@@ -1,5 +1,5 @@
 require 'lwac/server/storage_manager'
-require 'sqlite3'
+require 'lwac/server/db_conn'
 
 module LWAC
 
@@ -10,23 +10,44 @@ module LWAC
     # on the form of this config hash.
     def initialize(config)
       @config = config
-      find_schemata
       load_server_config
+
+      @dbclass = case(@server_config[:storage][:database][:engine])
+        when :mysql
+          MySQLDatabaseConnection
+        else
+          SQLite3DatabaseConnection
+        end
+
+      find_schemata
       @enc = @server_config[:client_policy]
 
     end
 
     # Create a database at the given path
-    def create_db(path)
-      $log.info "Creating db at #{path} using schema from #{@config[:schemata_path]}..."
-      SQLite3::Database.new(path) do |db|
+    def create_db(db_conf)
 
-        @schemata.each{|s|
-          $log.debug "Schema: #{s}"
-          schema = File.read(s)
-          db.execute(schema)
-        }
+      # Nice output
+      case( db_conf[:engine] )
+      when :mysql
+        $log.info "Creating MySQL db at using schema from #{@config[:schemata_path]}..."
+      else
+        $log.info "Creating SQLite3 db at #{db_conf[:engine_conf][:filename]} using schema from #{@config[:schemata_path]}..."
       end
+
+      # Actual stuff---create the db
+      @dbclass.create_database( db_conf[:engine_conf] )
+
+      # Apply schema
+      db = @dbclass.new( db_conf[:engine_conf] )
+      @schemata.each{|s|
+        $log.debug "Schema: #{s}"
+        schema = File.read(s)
+        db.execute(schema, false)
+      }
+      db.close
+
+      # reporting
       $log.info "Done!"
     end
 
@@ -95,21 +116,19 @@ module LWAC
 
     # Looks in the schema directory and finds SQL files
     def find_schemata
-      @config[:schemata_path] = File.join(LWAC::RESOURCE_DIR, 'schemata') if not @config[:schemata_path]
+      @config[:schemata_path] = File.join(LWAC::RESOURCE_DIR, 'schemata', @server_config[:storage][:database][:engine].to_s) if not @config[:schemata_path]
       @schemata     = Dir.glob(File.join(@config[:schemata_path], "*.sql"))
     end
 
     # Connect to the database with a high level object manager
     def connect_to_db
-      # Same footwork as in the StorageManager
-      @server_config[:storage][:database][:filename] = File.join(@server_config[:storage][:root], @server_config[:storage][:database][:filename])
-
       # Create db if not already there
-      if not File.exist?(@server_config[:storage][:database][:filename])
+      # FIXME: make this conditional work on mysql
+      if not @dbclass.database_exists?( @server_config[:storage][:database][:engine_conf] )
         if @config[:create_db] then
-          create_db(@server_config[:storage][:database][:filename])
+          create_db(@server_config[:storage][:database])
         else
-          raise "Database file #{@server_config[:storage][:database][:filename]} does not exist, and current settings do not allow creating it."
+          raise "Database does not exist, and current settings do not allow creating it."
         end
       end
 
