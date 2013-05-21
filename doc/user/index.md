@@ -4,7 +4,7 @@ Welcome to the LWAC user guide.  The purpose of this document is to explain some
 
 Installation and Dependencies
 -----------------------------
-LWAC's dependencies and installer are documented [here](install.html)
+LWAC's dependencies and installation are documented [here](install.html)
 
 Concepts
 --------

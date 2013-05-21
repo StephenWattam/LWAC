@@ -19,7 +19,7 @@ This section governs the manner in which clients attempt to contact the server, 
 
  * `connect_timeout`         --- How long we should give the socket to respond when connecting to the server
  * `minimum_reconnect_time`  --- The minimum time we should wait before reconnecting
- * `maximum_reconnect_time`  --- The maximum time we should wait before connecting, approached graduaklly from the minimum
+ * `maximum_reconnect_time`  --- The maximum time we should wait before connecting, approached gradually from the minimum
  * `connect_failure_penalty` --- The delay to add to the backoff time upon each failure, up to the `maximum_reconnect_time`
 
 Client

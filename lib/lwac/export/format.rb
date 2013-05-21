@@ -187,7 +187,7 @@ module LWAC
 
   # ------------------------------------------------------------
   # Output to an erb template
-  class MultiTemplateFormatter < Formatter  # FIXME: should not use KeyValueFormatter
+  class MultiTemplateFormatter < Formatter  
     require 'erb'
 
     def initialize( config )
@@ -198,7 +198,6 @@ module LWAC
     end
 
     def close_point()
-      # FIXME: expression-based filename...
       filename = get_filename( @data )
       $log.debug "Writing point to file #{filename}..."
       $log.warn "Overwriting (#{filename}) (you might have selected a non-unique key field)" if File.exist?(filename)
@@ -228,5 +227,84 @@ module LWAC
       return nil
     end
   end
+
+
+
+
+  # ------------------------------------------------------------
+  # Output to an erb template
+  class MultiXMLFormatter < Formatter  
+    require 'rexml/document'
+    require 'rexml/formatters/transitive'
+
+    def close_point()
+      filename = get_filename( @data )
+      $log.debug "Writing point to file #{filename}..."
+      $log.warn "Overwriting (#{filename}) (you might have selected a non-unique key field)" if File.exist?(filename)
+
+      File.open(filename, 'w'){ |f|
+        xml = build_xml_doc( @data, nil, "data")
+
+        # Select a formatter
+        formatter = case(@config[:xml_format])
+                      when :whitespace
+                        REXML::Formatters::Transitive.new(@config[:xml_indent] || 2)
+                      when :pretty
+                        REXML::Formatters::Pretty.new(@config[:xml_indent] || 2)
+                      else
+                        REXML::Formatters::Default.new()
+                      end
+
+        # Compact if pretty
+        formatter.compact = true if @config[:xml_format] == :pretty
+
+        # Do output
+        formatter.write( xml, f )
+      }
+    end
+
+    private
+
+    # Recursively construct an XML doc from a resource 
+    def build_xml_doc(data, root=nil, name=nil)
+      name = data.__name if (not name) and (data.is_a? Resource)
+      node = REXML::Element.new( name, root )
+
+      if data.is_a? Resource then
+        data.__params.each{|p|
+          val = eval("data.#{p}")
+
+          if val.is_a? Resource
+            build_xml_doc( val, node, p.to_s )
+          else
+            build_xml_doc( val, node, p.to_s )
+          end
+        }
+      else
+        node.add_attributes({'type' => data.class.to_s})
+        if data.is_a? Array
+          data.each{|val|
+            build_xml_doc( val, node, 'value' )
+          }
+        else 
+          node.add_text( data.to_s )
+        end
+      end
+
+      return node
+    end
+
+    def get_filename(data)
+      filename = eval( "\"#{@config[:filename]}\"" ).to_s
+      FileUtils.mkdir_p( File.dirname(filename) ) if not File.exist?( File.dirname(filename) )
+      return filename
+    rescue Exception => e
+      $log.error "Failed to generate filename."
+      $log.error "This data point will be skipped."
+      $log.debug "#{e.backtrace.join("\n")}"
+      return nil
+    end
+  end
+
 
 end

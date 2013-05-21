@@ -244,6 +244,7 @@ Formatters are small scripts which transform the data into some usable format.  
  * `:multicsv` --- Outputs to multiple CSV files (one per point)
  * `:json` --- Outputs serialised JSON to a file (or a pipe) --- useful for IPC if you have non-ruby formatters
  * `:multitemplate` --- Outputs to one ERB template per point, capable of rendering XML, HTML, etc
+ * `:multixml` --- XML output of all data for later transformation using XSLT
 
 ### csv
 The CSV formatter outputs a single CSV file at the level requested.  It uses Ruby's FasterCSV implementation, and supports all of the options therein (such as changing separator, quote and line characters) as well as using the standardised field formatting routines outlined below:
@@ -276,6 +277,15 @@ This runs a specified ERB template for each point.  Since ERB templates are alre
  * `filename` --- An expression that outputs the filename.  Variables can easily be included in a string using ruby's `#{}` syntax: such as "/#{sample.id}/datapoint#{data.datapoint.id}.csv".  Directories will be created if they don't already exist.
  * `template` --- The path to a template
 
+
+### multixml
+This exports all data to XML for each point, using REXML to handle the generation.  This XML file may then be transformed into another format (i.e. TEI lite or similar using XSLT.  The available options largely affect the style of output:
+
+ * `filename` --- An expression that outputs the filename.  Variables can easily be included in a string using ruby's `#{}` syntax: such as "/#{sample.id}/datapoint#{data.datapoint.id}.csv".  Directories will be created if they don't already exist.
+ * `xml_format` --- one of `:default`, `:pretty`, or `:whitespace`.  The `:default` and `whitespace` options preserve document whitespace, whereas `:pretty` destroys it in the name of beauty.
+ * `xml_indent` --- The number of spaces to use as an indent.  Use 0 to disable indenting.  Note that this doesn't apply for the `:default` `xml_format`, which does not handle indenting.
+
+Unfortunately, it is rather slow compared to the others.  If you wish to use a specific XML format, I therefore recommend writing your own template using the multitemplate formatter.
 
 
 

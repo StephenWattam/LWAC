@@ -4,7 +4,7 @@ LWAC's workflow is based around a simple import-download-export system, and as s
 
 Install
 -------
-The dependency installer is documented [elsewhere](install.html).
+Installation (and testing) is documented [elsewhere](install.html).
 
 Import
 ------
@@ -14,7 +14,7 @@ The import tool is responsible for creating a metadata database, and importing l
 
 The import script may be run simply by running
 
-    ./lwac import config.yml LINKFILE
+    lwac import config.yml LINKFILE
     
 where:
 
@@ -48,7 +48,7 @@ Each server supports an unlimited number of clients, however, their access to th
 #### Usage
 To run the server, simply provide it with a path to a config file:
 
-    ./lwac server config/server.yml
+    lwac server config/server.yml
 
 
 #### Configuration
@@ -65,7 +65,7 @@ For more detailed configuration options, see the detailed writeup on the [server
 #### Usage
 To run the client, simply provide it with a path to a relevant config file:
 
-    ./lwac client config/client.yml
+    lwac client config/client.yml
 
 #### Configuration
 The client is also managed exclusively by its config file.  See more detail on the [client configuration page](client_config.html).
@@ -79,7 +79,7 @@ The export tool is used to reformat information from the metadata and backing st
 ### Usage
 To run the export tool, simply provide it with a path pointing to a relevant config file:
 
-    ./lwac export config/export.yml
+    lwac export config/export.yml
 
 It's worth noting that the export tool uses the server configuration file for corpus access, and thus will need to be able to access that also.
 

@@ -101,7 +101,8 @@ module LWAC
       :csv            => CSVFormatter,
       :multicsv       => MultiCSVFormatter,
       :json           => JSONFormatter,
-      :multitemplate  => MultiTemplateFormatter
+      :multitemplate  => MultiTemplateFormatter,
+      :multixml       => MultiXMLFormatter
     }
 
     def initialize(config)
