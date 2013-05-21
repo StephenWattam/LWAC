@@ -1,6 +1,6 @@
 module LWAC
 
-  module OutputFormatter
+  module KeyValueFormat 
     # The output formatting system for the export tool uses these procedures.
     #
     # They are responsible for:
@@ -9,89 +9,6 @@ module LWAC
     #  * Running filters on data
     #  * Producing output strings from formatters and data
     #
-
-
-
-
-    # -----------------------------------------------------------------------------
-    # Loads filters from the config file, in the following format:
-    #  {:level => {:filter_name => "expression", :name => "expr", :name => "expr"},
-    #   :level => {...}
-    #  }
-    #
-    # Where :level describes one of the filtering levels supported by the export
-    # script:
-    #  :server --- All data from a server's download process (mainly summary stats)
-    #  :sample --- Data for a given sample (cross-sect)
-    #  :datapoint --- Data for a given link
-    #
-    # Filter names are arbitrary identifiers for your referernce.
-    #
-    # Expressions can refer to any properties of the resource they use, or any
-    # resources from higher levels, for example, sample levels can refer to sample.id,
-    # but not datapoint.id.
-    #
-    def self.compile_filters( filters )
-      filters.each{|level, fs|
-        $log.info "Compiling #{level}-level filters..."
-
-        if(fs) then
-          fs.each{|f, v|
-            $log.info "  Preparing filter #{f}..."
-            v = {:expr => v, :lambda => nil}
-
-            $log.debug "Building expression for filter (#{f})..."
-            begin
-              v[:lambda] = eval("lambda{|data|" + v[:expr] + "}")
-            rescue StandardError => e
-              $log.fatal "Error building expression for field: #{f}."
-              $log.fatal "Please review your configuration."
-              $log.fatal "The exact error was: \n#{e}"
-              $log.fatal "Backtrace: \n#{e.backtrace.join("\n")}"
-              exit(1)
-            end
-            $log.debug "Success so far..."
-
-            # pop back into original list
-            fs[f] = v
-          }
-        end
-      
-        filters[level] = fs
-        $log.info "Done."
-      }
-    end
-
-
-
-
-
-    # -----------------------------------------------------------------------------
-    # Runs filters for a given level
-    def self.filter( data, filters )
-      return true if not filters # Accept if no constraints given
-
-      $log.debug "Filtering line..."
-      # Run all constraints, fail fast
-      filters.each{|f, v|
-        if not v[:lambda].call(data)
-          $log.debug "Rejecting due to filter: #{f}"
-          return false 
-        end
-      }
-
-      # We got this far, accept!
-      $log.debug "Accepting."
-      return true
-
-    rescue StandardError => e
-      $log.fatal "Error filtering data: #{e}"
-      $log.fatal "This is probably a bug in your filtering expressions."
-      $log.fatal "Current state: filtering #{f}." if defined? f
-      $log.fatal "Backtrace: \n#{e.backtrace.join("\n")}"
-      exit(1)
-    end
-
 
 
 
@@ -207,29 +124,6 @@ module LWAC
       $log.fatal "Currently formatting '#{current}'." if current
       $log.fatal "Backtrace: \n#{e.backtrace.join("\n")}"
       exit(1)
-    end
-
-
-
-    # -----------------------------------------------------------------------------
-    # Describe progress through the sample
-    def self.announce(count, progress, estimated_lines, period)
-      return progress if(count % period) != 0
-
-      # Extract stuff from the progress info
-      last_count, time = progress
-
-      # Compute estimated links remaining
-      links_remaining = estimated_lines - count
-      # Compute time per link since last time
-      time_per_link = (Time.now - time).to_f/(count - last_count).to_f
-      # Compute percentage
-      percentage = ((count.to_f / estimated_lines) * 100).round(2)
-
-      $log.info "#{count}/#{estimated_lines} (#{percentage}%) complete at #{(1.0/time_per_link).round(2)}/s ETA: #{Time.now + (time_per_link * links_remaining)}"
-
-      # Return a new progress list
-      return [count, Time.now]
     end
 
   end

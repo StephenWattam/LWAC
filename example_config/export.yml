@@ -2,12 +2,45 @@
 :server_config: example_config/server.yml     # Export reads the storage config from a server.  Point this at the server config.
 :output:                              # Output config, which is pretty much everything
   :announce: 2000                       # Every nth line, update the UI
-  :filename: export.csv                 # Write to this file or directory, depending on exporter system
 
-  :formatter: :multitemplate                      # :csv for single-file csv output, :multicsv for one-csv-per-point, :multitemplate for one-erb-per-point
+  :formatter: :multitemplate                      # :csv for single-file csv output, :multicsv for one-csv-per-point, :json for json file,  :multitemplate for one-erb-per-point
   :formatter_opts:
-    :filename: :sample_id               # Multicsv and template option.  Select filename from one of the keys in the line
-    :template: example_config/export_template.erb
+    :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.html                 # Write to this file or directory, depending on exporter system
+    # :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.csv                 # Write to this file or directory, depending on exporter system
+    # :filename: export.csv               # Multicsv and template option.  Select filename from one of the keys in the line
+    :template: example_config/export_template_html_sampler.erb
+    :csv_opts:
+    :fields:                              # Formatters define how data is output to CSV, once selected.
+      :sample_id: sample.id               # Make the 'sample_id' field contain the sample.id variable.
+      :link_id: datapoint.id              # link_id will contain the datapoint.id variable, etc...
+      :link_uri: datapoint.uri
+      :redirected:                        # 'redirected' field will include the output of the expression below
+        :expr: "return (data.datapoint.response.effective_uri and data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/'))"
+      :dns_time: datapoint.response.dns_lookup_time 
+      :redirect_time:                     # 'redirect_time' will contain the variable datapoint.response.redirect_time only if condition evaluates to true, and "" otherwise
+        :var: datapoint.response.redirect_time
+        :condition: "(x and x.to_f > 0)"
+        :missing: ""
+      :rtt: datapoint.response.round_trip_time  
+      :response_code: datapoint.response.code
+      :imperfect: 
+        :expr: "data.datapoint.response.code.to_i == 200"
+      :redirect_proportion:               # A long expression on multiple lines
+        :expr: >
+          r = data.datapoint.response
+
+          if(r.redirect_time and r.redirect_time > 0) then
+              return r.redirect_time.to_f / r.round_trip_time.to_f
+          else
+              return "NA"
+          end
+      :sample_file: sample.path
+      :sample_dir: sample.dir
+      :datapoint_dir: datapoint.dir
+      :datapoint_path: datapoint.path
+      :last_id: sample.last_contiguous_id
+      # :raw: datapoint.body            # Body content
+      #:l2: datapoint.id
   :headers: true                        # Output CSV headers?
   :level: :datapoint                    # output one line per :server, :sample or :datapoint
                                         #   note that if you select :server, all the
@@ -19,36 +52,6 @@
 #      :test_filter2: data.sample.id == 1
     :datapoint:                           # datapoint level filters
 #      :test_filter3: data.datapoint.id > 10
-  :format:                              # Formatters define how data is output to CSV, once selected.
-    :sample_id: sample.id               # Make the 'sample_id' field contain the sample.id variable.
-    :link_id: datapoint.id              # link_id will contain the datapoint.id variable, etc...
-    :link_uri: datapoint.uri
-    :redirected:                        # 'redirected' field will include the output of the expression below
-      :expr: "return (data.datapoint.response.effective_uri and data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/'))"
-    :dns_time: datapoint.response.dns_lookup_time 
-    :redirect_time:                     # 'redirect_time' will contain the variable datapoint.response.redirect_time only if condition evaluates to true, and "" otherwise
-      :var: datapoint.response.redirect_time
-      :condition: "(x and x.to_f > 0)"
-      :missing: ""
-    :rtt: datapoint.response.round_trip_time  
-    :response_code: datapoint.response.code
-    :imperfect: 
-      :expr: "data.datapoint.response.code.to_i == 200"
-    :redirect_proportion:               # A long expression on multiple lines
-      :expr: >
-        r = data.datapoint.response
-
-        if(r.redirect_time and r.redirect_time > 0) then
-            return r.redirect_time.to_f / r.round_trip_time.to_f
-        else
-            return "NA"
-        end
-    :sample_file: sample.path
-    :sample_dir: sample.dir
-    :datapoint_dir: datapoint.dir
-    :datapoint_path: datapoint.path
-    :last_id: sample.last_contiguous_id
-    #:l2: datapoint.id
 :logging:                             # Log output settings
   :progname: Export                     # Name of the app in the logs
   :logs:                                # List of logs

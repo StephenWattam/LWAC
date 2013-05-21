@@ -59,6 +59,16 @@ module LWAC
       return str
     end
 
+    # Expose parameters to people who may wish to iterate over them
+    def __params
+      @params
+    end
+
+    # Expose name to people who may wish to iterate over them
+    def __name
+      @name
+    end
+
   private
 
     # Store a clean internal parameter name

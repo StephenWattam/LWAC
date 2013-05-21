@@ -4,9 +4,9 @@ The export tool accesses the server's corpus and exports it according to a serie
 
 Data Access
 -----------
-Many of the features of the export tool require an understanding of how data is structured within the tool.  Data access is structured as a large tree, augmented and constructed at each level as the data is exported.  Variables are accessed on the tree by using dot notation, as with any member variables in ruby (i.e. `data.sample.id` will get the ID of the current sample).
+Many of the features of the export tool require an understanding of how data is structured within.  Data are stored as a large tree, sorted into three main levels.  Variables are accessed on the tree by using dot notation, as with any member variables in ruby (i.e. `data.sample.id` will get the ID of the current sample).
 
-Note that the export tool will only allow exporting of complete samples, i.e. those where all the links have been downloaded and the sample closed.
+Note that the export tool will only allow exporting of complete samples, i.e. those where all the links have been downloaded and the sample closed.  This allows it to be used whilst the server is still running.
 
 The hierachy is currently as below:
 
@@ -209,15 +209,19 @@ The export tool uses the server configuration to access a corpus, and loads it a
 
 Output
 ------
-Output is controlled using a filter/format system, which progresses through a series of expressions first to test for inclusion of data in the output set, and then to format it for presentation.  Currently the export tool only outputs CSV files.
+Output is controlled using a filter/format system:
 
+ 1. Data is selected for export only if one of the filter expressions matches.  Filters work at the server, sample, or datapoint level.
+ 2. Formatters transform the data for output, depending on your rules
+
+
+ * `formatter` --- The format system to use.  Options are !!TODO!!
+ * `formatter_opts` --- Options to control the formatter in question.  This is unique to each formatter, and they are all documented in their respective sections.
  * `announce` --- How often to update the terminal with progress information
- * `filename` --- The filename to export data into.  Will be clobbered rather than appended to.
- * `headers` --- Boolean.  Should the script output a header line at the top of the CSV?
+ * `headers` --- Boolean.  Should the script tell the formatter to output a header?
  * `level` --- What level to export at.  Possible values are `:server`, `:sample` or `:datapoint`.  This is partially used for optimisation---exporting datapoint-level variables with `level` set to `:server` will result in them all being nil.  See [concepts](concepts.html) for more information on what the levels correspond to within the LWAC system.
 
  * `filters[]` --- This is outlined in its own section below...
- * `format{}` --- This is *also* outlined in its own section below...
 
 
 
@@ -230,12 +234,58 @@ Data access is governed by a 'data' object containing a hierachy of all availabl
 
 
 
-### Formatting
-Data, once selected, must be formatted for output.  This is generally complicated by the need to handle missing data, especially where data is acquired from the web and may be particularly messy.  Variables may be formatted for output using one of three structures, each defined by a hash.
 
- * `format/FIELD_NAME{}` --- Output the result of the hash contained in `FIELD_NAME` as `FIELD_NAME`.  The contents of the `FIELD_NAME` hash may be one of the formats detailed below
 
-#### Simple Variable Formatting
+Formatters
+----------
+Formatters are small scripts which transform the data into some usable format.  Currently there are a few of these, and each has its own options:
+
+ * `:csv` --- Outputs to a single CSV file
+ * `:multicsv` --- Outputs to multiple CSV files (one per point)
+ * `:json` --- Outputs serialised JSON to a file (or a pipe) --- useful for IPC if you have non-ruby formatters
+ * `:multitemplate` --- Outputs to one ERB template per point, capable of rendering XML, HTML, etc
+
+### csv
+The CSV formatter outputs a single CSV file at the level requested.  It uses Ruby's FasterCSV implementation, and supports all of the options therein (such as changing separator, quote and line characters) as well as using the standardised field formatting routines outlined below:
+
+ * `filename` --- The filename to output to
+ * `csv_opts{}` --- A hash of CSV options, as conforming to the ruby specification [here](http://ruby-doc.org/stdlib-1.9.2/libdoc/csv/rdoc/CSV.html)
+ * `fields` --- A hash of key-expression sets conforming to the Field Formatting guidelines below
+
+
+### multicsv
+The MultiCSV formatter is capable of producing one CSV file per point.  Aside from the filename, it is otherwise identical to the CSV formatter:
+
+ * `filename` --- An expression that outputs the filename.  Variables can easily be included in a string using ruby's `#{}` syntax: such as "/#{sample.id}/datapoint#{data.datapoint.id}.csv".  Directories will be created if they don't already exist.
+ * `csv_opts{}` --- A hash of CSV options, as conforming to the ruby specification [here](http://ruby-doc.org/stdlib-1.9.2/libdoc/csv/rdoc/CSV.html)
+ * `fields` --- A hash of key-expression sets conforming to the Field Formatting guidelines below
+
+
+### json
+The JSON formatter is primarily designed to ship data elsewhere for processing by languages other than ruby.  It writes to a single file, and flushes after each point has been written for use with named pipes.
+
+ * `filename` --- A string filename to write to
+ * `fields` --- A hash of key-expression sets conforming to the Field Formatting guidelines below
+
+If `headers` is set to true, the formatter will output an array of headers as the first line, then it will output one point per line (separated using unix `\n` character) as an array thereafter.
+
+
+### multitemplate
+This runs a specified ERB template for each point.  Since ERB templates are already powerful ways of including expressions and data cleaning, this formatter doesn't use the Field Formatting conventions, and thus supports more complex forms of output.  It is the ideal way of exporting raw data, XML, or summaries to human-readable form, and a number of templates are provided in the example config for these purposes.
+
+ * `filename` --- An expression that outputs the filename.  Variables can easily be included in a string using ruby's `#{}` syntax: such as "/#{sample.id}/datapoint#{data.datapoint.id}.csv".  Directories will be created if they don't already exist.
+ * `template` --- The path to a template
+
+
+
+
+Field Formatting
+----------------
+Key-value formatters, such as `:csv` and `:multicsv` use a common format system based on small scripts.  The need to select data from the main set is generally complicated by the need to handle missing data, especially where data is acquired from the web and may be particularly messy.  Variables may be formatted for output using one of three structures, each defined by a hash.
+
+ * `fields/FIELD_NAME{}` --- Output the result of the hash contained in `FIELD_NAME` as `FIELD_NAME`.  The contents of the `FIELD_NAME` hash may be one of the formats detailed below
+
+### Simple Variable Formatting
 This is the simplest way of output a value, and should work in most instances.  To use it, simply specify the variable name (the `data.` prefix is optional), for example:
 
     :format:
@@ -245,7 +295,7 @@ This is the simplest way of output a value, and should work in most instances.  
 This will output a CSV with two columns, `sample_id` and `link_id`.
 
 
-#### Variable-and-condition 
+### Variable-and-condition 
 This will output the contents of a given variable if and only if a condition is true, and may be used to ensure that certain values are reported as missing.  It is defined as a hash containing three properties:
 
  * `FIELD_NAME/var` --- The variable in question.  The preceeding `data.` may be omitted, as with simple variable formatting above.
@@ -262,8 +312,7 @@ For example:
 
 This ensures that the `redirect_time` field is only populated if it is non-`nil` and contains a value over zero.
 
-
-#### Expression-based Formatting
+### Expression-based Formatting
 The most powerful, and complex, form of formatting relies on a free-form ruby expression to return a value for output.  The expression in question is provided as a string, as with other expression objects, and may handle any variables within the export tool whilst processing.  There is only one entry in the hash required:
 
  * `FIELD_NAME/expr` --- The expression to be used.  *Must* return a value.

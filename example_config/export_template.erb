@@ -1,6 +1,10 @@
 <%
-    require 'uri'
-    require 'cgi'
+    
+# -----------------------------------------------------------------------------
+# Escape HTML and URI-encode.  You may wish to re-use these
+#
+require 'uri'
+require 'cgi'
 
 # URLencoding
 def u(str)
@@ -12,25 +16,59 @@ def h(str)
   return CGI.escapeHTML(str.to_s)
 end
 
+# -----------------------------------------------------------------------------
+
+
+
+
+# Describe this resource in a nice html-friendly way
+def describe(what)
+    str = "<dl>"
+  what.__params.each{|p|
+    # Load the value
+    val = eval("what.#{p}")
+
+    # Output the string
+    str += "<dt>#{p}</dt><dd>"
+    if val.is_a? Resource
+        str += "#{describe(val)}" 
+    else
+        str += "#{h val.to_s}"
+    end
+    str += "</dd>\n"
+  }
+  str += "</dl>"
+  return str
+end
+
+
 
 
 %>
-
 <html>
     <head>
         <title>Export Template (File: <%=h filename%></title>
+
+        <style type="text/css">
+            dt{ font-weight: bold; }
+            dd{ font-family: monospace; }
+        </style>
     </head>
     <body>
         <h1>Exported Info</h1>
         <hr/>
         <p>This file is the result of a template export from LWAC.  It's just a placeholder that can accept any data (so you're still free to mess with the configs whilst trying this out.</p>
 
-        <h2>Summary of Data</h2>
-        <dl>
-            <% line.each{|k, v| %> 
-                <dt><%=h k%></dt><dd><%=h v%></dd>
-            <% } %>
-        </dl>
+        <h2>All Data</h2>
+        <p>Below is a hierachical listing of all available data properties and their values.</p>
+        <pre>
+<%=h data.describe%>
+        </pre>
+
+        <h2>All Data</h2>
+        <p>Now HTML formatted for extra fun.</p>
+        <%= describe(data) %>
+
     </body>
 
 </html>
