@@ -45,7 +45,11 @@ module LWAC
       @transaction        = false
       @transaction_limit  = config[:transaction_limit] || 0
       @transaction_count  = 0
+      
+      
       @db = Mysql2::Client.new( config )
+      @db.query_options.merge!(:as => :array)
+
     end
 
     def close
@@ -116,7 +120,7 @@ module LWAC
       # end the transaction if we have called enough statements
       end_transaction if @transaction_count > @transaction_limit
 
-      return res
+      return res.to_a
     end
     
     # MUST yield for schema to be applied
