@@ -1,6 +1,8 @@
 
 require 'thread'
-require 'curl'
+
+
+
 # Load the library for producing UUIDs
 require 'digest/md5'
 require 'lwac/client/storage'
@@ -97,6 +99,18 @@ module LWAC
   # -----------------------------------------------------------------------------------------------------
   class WorkerPool
     def initialize(size, cache, cache_limit, strict_cache_limit, client_id)
+
+
+      begin
+        require 'curl'
+      rescue LoadError
+        $log.fatal "Your current configuration is trying to use the 'curb' gem, but it is not installed."
+        $log.fatal "To install, run 'gem install curb --version \"~> 0.8\"'"
+        raise "Gem not found."
+      end
+
+
+
       @m    = Mutex.new # Data mutex for "producer" status
       @t    = [] #threads
       @w    = [] # workers

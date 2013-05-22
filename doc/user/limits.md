@@ -63,7 +63,7 @@ The filesystem is used extensively in LWAC both as backing store and as a cache.
 The server's use of the filesystem is twofold:
 
  * Corpus backing store
- * SQLite3 database (read only)
+ * Metadata database (read only beyond initial import)
 
 #### Max Files per Dir
 Many filesystems impose a fairly low limit on the number of files that will fit in one directory.  Since one file per datapoint is used in a corpus, they may be spanned over many directories.  See the [server config](server_config.html) for the relevant configuration properties.
@@ -99,7 +99,7 @@ The server requires enough memory to store:
 
  * Lists of failed links (which accumulate if clients drop out during a batch, but are soon re-used).  A thousand links uses under 100KB of storage in RAM.
  * Datapoints currently being checked in (see `check_in_rate` in the [client config](client_config.html) to set this in MB)
- * SQLite3 cache (see above)
+ * SQLite3 or MySQL cache (see above)
 
 This means that the server should always be using less than a few hundred megabytes of RAM, and much of that is ruby/libsqlite3/libcurl.
 

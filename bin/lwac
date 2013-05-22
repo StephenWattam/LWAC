@@ -59,12 +59,16 @@ case tool
   when :client
     require 'lwac/client'
 
-    # Start the client going
-    dc = LWAC::DownloadClient.new(config)
+    begin
+      # Start the client going
+      dc = LWAC::DownloadClient.new(config)
 
-    # download
-    dc.work
-
+      # download
+      dc.work
+    rescue StandardError => e
+      $log.error "Error: #{e}"
+      $log.debug "#{e.backtrace.join("\n")}"
+    end
 
 
   # ---------------------------------------------------------------------------
@@ -99,11 +103,17 @@ case tool
   when :export
     require 'lwac/export'
 
-    # Construct the exporter object and load stuff from disk
-    ex = LWAC::Exporter.new(config)
+    begin
+      # Construct the exporter object and load stuff from disk
+      ex = LWAC::Exporter.new(config)
 
-    # Dump stuff back to disk
-    ex.export
+      # Dump stuff back to disk
+      ex.export
+      
+    rescue StandardError => e
+      $log.error "Error: #{e}"
+      $log.debug "#{e.backtrace.join("\n")}"
+    end
 
 
   # ---------------------------------------------------------------------------

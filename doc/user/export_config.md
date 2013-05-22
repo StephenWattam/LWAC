@@ -207,6 +207,11 @@ The export tool uses the server configuration to access a corpus, and loads it a
 
  * `server_config` --- The path to the server configuration file.
 
+For example:
+
+    :server_config: example_config/server.yml
+
+
 Output
 ------
 Output is controlled using a filter/format system:
@@ -223,16 +228,36 @@ Output is controlled using a filter/format system:
 
  * `filters[]` --- This is outlined in its own section below...
 
+For example:
+
+    :output:
+      :announce: 2000
+      :headers: true
+      :level: :datapoint
+      :formatter: ...see below... 
+      :formatter_opts:
+        ...
+      :filters:
+        ...
+
 
 
 ### Filtering
 Filters are small scripts that, presented with data, return true to include a value in output, or false to discount it.  Filters may operate at any level to exclude a certain `:server`, `:sample`, or `:datapoint`, and are defined in one of these three lists.
 
- * `filters/server[]`, `filters/sample[]`, `filters/datapoint[]` --- Each entry in one of these lists should be an expression that evaluates to `true`/non-`nil` or `false`/`nil`.
+ * `filters/server{}`, `filters/sample{}`, `filters/datapoint{}` --- Each entry in one of these lists should be an expression that evaluates to `true`/non-`nil` or `false`/`nil`.
 
 Data access is governed by a 'data' object containing a hierachy of all available data at the given level.  See 'Data Access' above for more information on how to refer to specific variables.
 
+For example:
 
+    :filters:
+      :server:
+      :sample:
+        :test_filter: data.sample.id > 1 and data.sample.id < 3
+        :test_filter2: data.sample.id == 1
+      :datapoint:
+        :test_filter3: data.datapoint.id > 10
 
 
 
@@ -253,6 +278,15 @@ The CSV formatter outputs a single CSV file at the level requested.  It uses Rub
  * `csv_opts{}` --- A hash of CSV options, as conforming to the ruby specification [here](http://ruby-doc.org/stdlib-1.9.2/libdoc/csv/rdoc/CSV.html)
  * `fields` --- A hash of key-expression sets conforming to the Field Formatting guidelines below
 
+For example:
+
+    :formatter: :csv
+    :formatter_opts:
+      :filename: export.csv
+      :csv_opts:
+        :separator: "\t"
+      :fields:
+        ...
 
 ### multicsv
 The MultiCSV formatter is capable of producing one CSV file per point.  Aside from the filename, it is otherwise identical to the CSV formatter:
@@ -261,6 +295,14 @@ The MultiCSV formatter is capable of producing one CSV file per point.  Aside fr
  * `csv_opts{}` --- A hash of CSV options, as conforming to the ruby specification [here](http://ruby-doc.org/stdlib-1.9.2/libdoc/csv/rdoc/CSV.html)
  * `fields` --- A hash of key-expression sets conforming to the Field Formatting guidelines below
 
+For example:
+
+    :formatter: :multicsv
+    :formatter_opts:
+      :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.csv
+      :csv_opts:      # defaults
+      :fields:
+        ...
 
 ### json
 The JSON formatter is primarily designed to ship data elsewhere for processing by languages other than ruby.  It writes to a single file, and flushes after each point has been written for use with named pipes.
@@ -270,6 +312,13 @@ The JSON formatter is primarily designed to ship data elsewhere for processing b
 
 If `headers` is set to true, the formatter will output an array of headers as the first line, then it will output one point per line (separated using unix `\n` character) as an array thereafter.
 
+For example:
+
+    :formatter: :json
+    :formatter_opts:
+      :filename: export.pipe
+      :fields:
+        ...
 
 ### multitemplate
 This runs a specified ERB template for each point.  Since ERB templates are already powerful ways of including expressions and data cleaning, this formatter doesn't use the Field Formatting conventions, and thus supports more complex forms of output.  It is the ideal way of exporting raw data, XML, or summaries to human-readable form, and a number of templates are provided in the example config for these purposes.
@@ -277,6 +326,12 @@ This runs a specified ERB template for each point.  Since ERB templates are alre
  * `filename` --- An expression that outputs the filename.  Variables can easily be included in a string using ruby's `#{}` syntax: such as "/#{sample.id}/datapoint#{data.datapoint.id}.csv".  Directories will be created if they don't already exist.
  * `template` --- The path to a template
 
+For example:
+
+    :formatter: :multitemplate
+    :formatter_opts:
+      :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.html
+      :template: example_config/export_template_html_sampler.erb
 
 ### multixml
 This exports all data to XML for each point, using REXML to handle the generation.  This XML file may then be transformed into another format (i.e. TEI lite or similar using XSLT.  The available options largely affect the style of output:
@@ -287,6 +342,13 @@ This exports all data to XML for each point, using REXML to handle the generatio
 
 Unfortunately, it is rather slow compared to the others.  If you wish to use a specific XML format, I therefore recommend writing your own template using the multitemplate formatter.
 
+For example:
+
+    :formatter: :multixml
+    :formatter_opts:
+      :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.xml
+      :xml_format: :pretty
+      :xml_indent: 2
 
 
 Field Formatting
@@ -297,6 +359,8 @@ Key-value formatters, such as `:csv` and `:multicsv` use a common format system 
 
 ### Simple Variable Formatting
 This is the simplest way of output a value, and should work in most instances.  To use it, simply specify the variable name (the `data.` prefix is optional), for example:
+
+For example:
 
     :format:
       :sample_id: sample.id
@@ -344,6 +408,39 @@ For example:
 
 This example outputs two fields.  The former, `okay_resp`, outputs 'true' if the response code was 200.  The latter, which uses YAML's multi-line string syntax, computes the redirect time as a proportion of the total request time, as a measure of 'how redirected' something was, and returns "NA" if the times are unavailable.
 
+For example:
+
+    :fields:
+      ...
+      :sample_id: sample.id               # Make the 'sample_id' field contain the sample.id variable.
+      :link_id: datapoint.id              # link_id will contain the datapoint.id variable, etc...
+      :link_uri: datapoint.uri
+      :redirected:                        # 'redirected' field will include the output of the expression below
+        :expr: "return (data.datapoint.response.effective_uri and data.datapoint.uri.chomp('/') == data.datapoint.response.effective_uri.chomp('/'))"
+      :dns_time: datapoint.response.dns_lookup_time 
+      :redirect_time:                     # 'redirect_time' will contain the variable datapoint.response.redirect_time only if condition evaluates to true, and "" otherwise
+        :var: datapoint.response.redirect_time
+        :condition: "(x and x.to_f > 0)"
+        :missing: ""
+      :rtt: datapoint.response.round_trip_time  
+      :response_code: datapoint.response.code
+      :imperfect: 
+        :expr: "data.datapoint.response.code.to_i == 200"
+      :redirect_proportion:               # A long expression on multiple lines
+        :expr: >
+          r = data.datapoint.response
+
+          if(r.redirect_time and r.redirect_time > 0) then
+              return r.redirect_time.to_f / r.round_trip_time.to_f
+          else
+              return "NA"
+          end
+      :sample_file: sample.path
+      :sample_dir: sample.dir
+      :datapoint_dir: datapoint.dir
+      :datapoint_path: datapoint.path
+      :last_id: sample.last_contiguous_id
+      # :raw: datapoint.body            # Body content
 
 Logging
 -------

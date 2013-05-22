@@ -12,6 +12,12 @@ This section defines which server to connect to.
  * `port`       --- The port to use when contacting the server
  * `serialiser` --- The serialisation method to use when communicating with the server.  Options are `:marshal`, `:json` or `:yaml`.  Of these `:marshal` is by far the fastest.  Later versions of LWAC will likely support `:msgparse`, which is faster still.
 
+For example:
+
+    :server:
+      :address: "127.0.0.1"
+      :port: 27401
+      :serialiser:  :marshal
 
 Network
 -------
@@ -21,6 +27,14 @@ This section governs the manner in which clients attempt to contact the server, 
  * `minimum_reconnect_time`  --- The minimum time we should wait before reconnecting
  * `maximum_reconnect_time`  --- The maximum time we should wait before connecting, approached gradually from the minimum
  * `connect_failure_penalty` --- The delay to add to the backoff time upon each failure, up to the `maximum_reconnect_time`
+
+For example:
+
+    :network:
+      :connect_timeout: 20
+      :minimum_reconnect_time: 1
+      :maximum_reconnect_time: 240
+      :connect_failure_penalty: 3
 
 Client
 ------
@@ -39,6 +53,18 @@ Clients check out batches of links, process them, then check in smaller batches 
    * If using disk caching, `check_in_size + simultaneous_workers * max_body_size`
  * `simultaneous_workers` --- The number of workers to run in the same pool.  Given preferrable network conditions, this many connections to websites will be open at once, and this number must be chosen whilst bearing in mind the limitations of your kernel and netiquette (especially if you have many links pointing at the same servers).  Within each client, links are downloaded from servers by a series of workers, which consume links from the pending pool.  This has the distinct advantage of being capable of very high degrees of parallelism (beyond that where the kernel will start dropping connections) with relatively little overhead.
 
+For example:
+
+    :client:
+      :announce_progress: true
+      :monitor_rate: 0.5
+      :uuid_salt: "LOCAL"
+      :batch_capacity: 1000
+      :cache_limit: 200
+      :check_in_size: 200
+      :strict_cache_limit: true
+      :simultaneous_workers: 200
+      :cache_dir:                   # nil to use RAM cache
   
 Logging
 -------

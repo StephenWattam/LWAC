@@ -45,7 +45,7 @@ The corpus itself is structured as a root directory, containing a specific struc
 
 The corpus includes:
 
- * The metadata database (described elsewhere)
+ * The metadata database (if using SQLite3)
  * The state of the current sample.  This is stored as a serialised ruby object so that a sample may be resumed later if the server is stopped.
  * A list of sample ID folders containing:
    * A file describing the properties of this sample as a serialised ruby Sample object

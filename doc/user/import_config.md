@@ -15,6 +15,13 @@ Other than that its configuration options apply to output and file handling:
  * `create_db`      --- Boolean.  Set to `true` to make the import script attempt to create the database if it doesn't exist.
  * `notify`         --- How many lines should be import before the UI updates and tells the user.
 
+For example:
+
+    :server_config: example_config/server.yml
+    :schemata_path:                             # use defaults
+    :notify: 12345
+    :create_db: true
+
 
 Logging
 -------

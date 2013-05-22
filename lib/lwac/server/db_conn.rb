@@ -39,9 +39,18 @@ module LWAC
 
   # TODO
   class MySQLDatabaseConnection < DatabaseConnection
-    require 'mysql2'
 
     def initialize(config = {})
+
+      begin
+        require 'mysql2'
+      rescue LoadError
+        $log.fatal "Your current configuration is trying to use the 'mysql2' gem, but it is not installed."
+        $log.fatal "To install, run 'gem install mysql2 --version \"~> 0.3\"'"
+        raise "Gem not found."
+      end
+
+
       @transaction        = false
       @transaction_limit  = config[:transaction_limit] || 0
       @transaction_count  = 0
@@ -205,10 +214,19 @@ module LWAC
 
   # ---------------------------------------------------------------------------
   class SQLite3DatabaseConnection < DatabaseConnection
-    require 'sqlite3'
 
     # Create a new connection to a database at dbpath.
     def initialize(config = {})
+
+      begin
+        require 'sqlite3'
+      rescue LoadError
+        $log.fatal "Your current configuration is trying to use the 'sqlite3' gem, but it is not installed."
+        $log.fatal "To install, run 'gem install sqlite3 --version \"~> 1.3\"'"
+        raise "Gem not found."
+      end
+
+
       raise "SQLite3 database not found" if not File.exist?( config[:filename].to_s )
 
       @transaction        = false

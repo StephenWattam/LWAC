@@ -17,15 +17,87 @@ Storage is defined by the `/storage/` key, and contains details on the corpus an
  * `files_per_dir`   --- How many files to store in each directory below the `sample_subdir`.  This is set to avoid overloading filesystems that have finite inode tables.
  * `serialiser`      --- The serialisation method used to write to disk.  Supported methods are `:marshal`, `:yaml` or `:json`.  `:marshal` is fastest and recommended unless you desperately need to access the corpus using languages other than ruby.
 
-### Database Details
+For example:
 
- * `database/filename`          --- The path to the metadata database, relative to the corpus root.
- * `database/table`             --- The table name where links to be downloaded are stored
- * `database/fields`            --- Contains information on the links table's fields
- * `database/fields/id`         --- The field name containing the link ID
- * `database/fields/uri`        --- The field name contain the URI to request from a remote server.
+    :storage:                       
+      :root: corpus                   
+      :state_file: state          
+      :sample_subdir: samples         
+      :sample_filename: sample    
+      :files_per_dir: 1000            
+      :serialiser:  :marshal          
+      :database: 
+         ...
+
+
+### Database Details
+The database is configured in `/storage/database` and consists of two main blocks:
+
+ * `engine` --- Either `:sqlite` for the SQLite3 database engine or `:mysql` for mysql.  You must install the appropriate dependency for the engine you select.
+ * `engine_conf{}` --- Configuration parameters for a given engine.  See below for examples of each.
+ * `table`             --- The table name where links to be downloaded are stored
+ * `fields`            --- Contains information on the links table's fields
+ * `fields/id`         --- The field name containing the link ID
+ * `fields/uri`        --- The field name contain the URI to request from a remote server.
+
+For example:
+
+    :table: links                   
+    :fields:                        
+      :id: id                         
+      :uri: uri                       
+    :engine: :mysql
+    :engine_conf:                       
+      ...
+
+
+#### SQLite3
+The SQLite3 engine is rather heavily optimised for read speed from the database, and is recommended if you want speed or have a smaller corpus.  Its configuration parameters are thus:
+
  * `database/transaction_limit` --- How many queries to run per transaction.  Larger numbers speed up access at the expense of data security.
  * `database/pragma{}`          --- A key-value list of pragma statements to configure the SQLite3 database.  These configure the database, and take the form of a list of key-value strings.  A full list of SQLite3 pragma statements is available on [their website](http://www.sqlite.org/pragma.html)
+ * `transaction_limit` --- The number of calls to make per transaction.  May provide a minor speed increase if large, but most database access is read only anyway.
+ * `filename` --- The position of the database file, relative to `pwd`
+
+For example:
+
+    :engine: :mysql              
+    :engine_conf:
+      :filename: corpus/links.db      
+      :transaction_limit: 100         
+      :pragma:                        # Custom pragmas.  See SQLite's docs.
+        "locking_mode": "EXCLUSIVE"     # Do not allow others to access the db when the server is running
+        "cache_size": 20000             # Allow a large cache
+        "synchronous": 0                # Asynchronous operations speed things up a lot
+        "temp_store": 2                 # Use temp storage
+
+#### MySQL
+The MySQL engine's configuration parameters are largely defined by the gem.  Full documentation is available on the [github page](https://github.com/brianmario/mysql2), and common parameters are listed below:
+
+ * `username` --- The uername to log in with
+ * `password` --- The password to use when connecting to the mysql server
+ * `host` --- The hostname at which the mysql server is listening (omit this if using a socket)
+ * `port` --- The port on which the mysql server is listening (omit this if using a socket)
+ * `socket` --- The filepath of a socket over which to talk to the mysql server
+ * `database` --- The name of the database where the links table will be stored
+ * `encoding` --- The character encoding to use.  'utf8' is _strongly_ recommended.
+
+For example:
+
+    :engine: :sqlite
+    :engine_conf:                       # Options from https://github.com/brianmario/mysql2
+      :username: lwac
+      :password: lwacpass
+      # :host: localhost
+      # :port: 3345
+      :socket: /var/run/mysqld/mysqld.sock
+      :database: lwac
+      :encoding: 'utf8'
+      :read_timeout: 10                 #seconds
+      :write_timeout: 10                #seconds
+      :connect_timeout: 10              #seconds
+      :reconnect: true                  #/false
+      :local_infile: true               #/false
 
 
 Sampling Policy
@@ -43,6 +115,15 @@ Note that if a sample takes more than `sample_time` to run, it will overlap and 
    * increment the prospective time by the `sample_time`
 
 If you wish to edit the sample computation algorithm, it resides in `lib/server/consistency_manager.rb`, under the method `compute_next_sample_time`.
+
+For example:
+
+    :sampling_policy:               
+      :sample_limit:  0               
+      :sample_time: 60
+      :sample_alignment: 0
+
+
 
 Client Policy
 -------------
@@ -79,6 +160,41 @@ MIME type handling can be controlled in a rudimentary manner to prevent superflu
    * `ignore_case` --- Should the regexp matching be case-insensitive?
    * `list[]` --- A list of regular expressions.  If one matches, depending on white/blacklist configuration, the body will be blanked.
 
+For example:
+
+    :client_policy:
+      :dry_run: false
+      :fix_encoding: true
+      :target_encoding: UTF-8
+      :encoding_options:
+        :invalid: :replace
+        :undef: :replace                         
+        #:replace: '?'                            
+        #:fallback:                               
+          #'from': 'to'
+          #'from2': 'to2'
+        #:xml: :attr                              
+        #:cr_newline: true                        
+        #:crlf_newline:                           
+        :universal_newline: true
+      :max_body_size:  20971520
+      :mimes:
+        :policy: :whitelist
+        :ignore_case: true
+        :list:
+          - ^text\/?.*$       # text-only mimes
+         #- ^.+$              # anything with a valid content-type
+      :curl_workers:
+        :max_redirects: 5
+        :useragent: ! '"Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.2.11) Gecko/20101012 Firefox/3.6.11"'
+        :enable_cookies: true
+        # :headers: "Header: String"
+        :verbose: false 
+        :follow_location: true
+        :timeout: 60
+        :connect_timeout: 10
+        :dns_cache_timeout: 10
+        :ftp_response_timeout: 10
 
 Client Management
 -----------------
@@ -95,6 +211,14 @@ These next to parameters define how long clients are told to wait when they cont
  * `empty_client_backoff` --- If no links are available but a sample is open, tell clients to retry after this time.
  * `delay_overestimate` --- When a sample is closed, clients are told to wait until after the sample opening time.  A small amount is added to this to prevent clients from hitting the final seconds before the sample is open.  This should be less than `empty_client_backoff` for it to make any difference.  I recommend below 10 seconds.
 
+For example:
+
+    :client_management:
+      :time_per_link: 5
+      :dynamic_time_overestimate: 1.3
+      :empty_client_backoff: 60
+      :delay_overestimate: 10
+
 
 Server
 ------
@@ -104,6 +228,12 @@ These settings govern the network properties of the server, as used for data tra
  * `port` --- The port on which to listen for this interface
  * `serialiser` --- The serialisation system used for communications with the client.  `:marshal`, `:yaml` and `:json` are supported.  `:marshal` is by far the fastest of these and is strongly recommended.  This must match the client's configuration.
 
+For example:
+
+    :server:
+      :interface:
+      :port: 27401
+      :serialiser:  :marshal
 
 Logging
 -------
