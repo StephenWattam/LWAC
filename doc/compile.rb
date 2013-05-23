@@ -33,7 +33,7 @@ FileUtils.mkdir_p(output_dir)
 # create list of pages
 pages = Dir.glob(input_dir).to_a.delete_if{|f| File.extname(f)[1..-1] != "md" or File.directory?(f)}.map{|f| File.basename(f).to_s[0..-(File.extname(f).length + 1)]}
 
-puts "LIST: #{pages.to_s}"
+puts "LIST: #{pages.join(', ')}"
 
 Dir.glob(input_dir){|f|
   if not File.directory?(f) and File.extname(f) == ".md" then

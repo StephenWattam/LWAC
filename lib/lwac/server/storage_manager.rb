@@ -72,6 +72,8 @@ module LWAC
     # Retrieve many links from an array of IDs
     def read_links_from_array(ids = [])
       links = []
+      return links if ids.length == 0
+
       @db.select(@config[:table], @config[:fields].values, "#{@config[:fields][:id]} in (#{ids.join(',')})").each{|l|
         links << Link.new(l[0], l[1])
       }
