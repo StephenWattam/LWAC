@@ -222,18 +222,21 @@ For example:
 
 Server
 ------
-These settings govern the network properties of the server, as used for data transfer to and from clients.
+These settings govern the network properties of the server, as used for data transfer to and from clients.  Settings here are passed to [SimpleRPC](http://stephenwattam.com/projects/simplerpc/), for which full documentation is available in the ruby gem.  Only the salient configuration options are listed here.
 
- * `interface` --- The hostname or IP address of an interface on which to listen
- * `port` --- The port on which to listen for this interface
- * `serialiser` --- The serialisation system used for communications with the client.  `:marshal`, `:yaml` and `:json` are supported.  `:marshal` is by far the fastest of these and is strongly recommended.  This must match the client's configuration.
+ * `hostname`  --- The hostname or IP address of an interface on which to listen
+ * `port`       --- The port on which to listen for this interface
+ * `password`   --- Optional.  The password to use for auth (must match client config)
+ * `secret`     --- Optional.  The encryption key to use when sending the password (must match client config)
 
 For example:
 
     :server:
-      :interface:
+      :hostname:
       :port: 27401
       :serialiser:  :marshal
+      :password: lwacpass
+      :secret: egrniognhre89n34ifnui4n8gf490
 
 Logging
 -------

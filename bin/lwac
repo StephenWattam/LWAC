@@ -27,22 +27,24 @@ case tool
     require 'simplerpc/server'
       
     # Fire up the server
-    server = LWAC::DownloadServer.new(config)
-    proxy = LWAC::DownloadService.new(server)
+    server  = LWAC::DownloadServer.new(config)
+    service = LWAC::DownloadService.new(server)
     
     # construct the rpc handler
-    rpc = SimpleRPC::Server.new( proxy, config[:server][:port], 
-                                 config[:server][:interface], 
-                                 SimpleRPC::Serialiser.new(config[:server][:serialiser]) )
+    rpc = SimpleRPC::Server.new( service, config[:server] )
 
     # listen
-    $log.info "Starting server on #{config[:server][:interface]}:#{config[:server][:port]}"
+    $log.info "Starting server on #{config[:server][:hostname]}:#{config[:server][:port]}"
     loop{
       begin
         rpc.listen
       rescue StandardError => e
         $log.error "Error: #{e}"
         $log.debug "#{e.backtrace.join("\n")}"
+      rescue SignalException => e
+        $log.fatal "Caught Signal: #{e}"
+        # $log.debug "#{e.backtrace.join("\n")}"
+        break;
       end
 
       $log.info "Restarting server after a short delay..."
@@ -51,6 +53,7 @@ case tool
 
     # Ensure we exit cleanly after EM's done
     server.close
+
 
 
   # ---------------------------------------------------------------------------
@@ -126,3 +129,4 @@ case tool
 end
 
 
+$log.info "Goodbye"

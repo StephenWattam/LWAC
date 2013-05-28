@@ -30,7 +30,7 @@ Gem::Specification.new do |s|
   # s.add_runtime_dependency 'curb',          '~> 0.8'
   # s.add_runtime_dependency 'sqlite3',       '~> 1.3'
   # s.add_runtime_dependency 'mysql2',        '~> 0.3'
-  s.add_runtime_dependency 'simplerpc',     '~> 0.1'
+  s.add_runtime_dependency 'simplerpc',     '~> 0.2'
 
   # Misc
   s.post_install_message = "Thanks for installing LWAC.\n\nOptional Dependencies\n---------------------\n - mysql2 ~> 0.3 (server)\n - sqlite3 ~> 1.3 (server)\n - curb ~> 0.8 (client)\n\nThe server/export/import tools REQUIRE either mysql2 or sqlite3.\nThe client REQUIRES curb.\n\n"

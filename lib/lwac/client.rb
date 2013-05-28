@@ -32,8 +32,7 @@ module LWAC
       @batch_request_delay  = Time.now  # don't recontact the server before this
 
       # Fire up el RPC client...
-      @rpc_client = SimpleRPC::Client.new( @config[:server][:address], @config[:server][:port], 
-                                           SimpleRPC::Serialiser.new( @config[:server][:serialiser] ) ) 
+      @rpc_client = SimpleRPC::Client.new( @config[:server] ) 
 
       # Current working links and download policy
       @links        = {}
@@ -254,7 +253,7 @@ module LWAC
           
           # Network Errors
           case e
-          when Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
+          when SimpleRPC::AuthenticationError, Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
             increment_reconnection_timer
           else
             # Continue to pass error up

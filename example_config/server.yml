@@ -78,9 +78,10 @@
   :empty_client_backoff: 60       # If we find no links waiting for download, tell the client to wait for this time before trying again
   :delay_overestimate: 10         # Overestimate any sample policy delays by up to this amount.  Helps avoid clock drift issues.
 :server:                        # Network server properties
-  :interface:          # The interface to listen on
+  :hostname:          # The interface to listen on
   :port: 27401                  # The port to listen on
-  :serialiser:  :marshal                  # :marshal, :json, :msgpack, :yaml.  :marshal highly recommended.
+  :password: lwacpass                                           # password
+  :secret: grnionfgn89540ng8953n8g0n54890gn90345ng95noe4ig54nio # encryption key
 :logging:                       # Logging and output options
   :progname: Server               # What to call the app in logs
   :logs:                          # A list of log outputs

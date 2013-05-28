@@ -4,12 +4,10 @@ LWAC is distributed as a gem, and this should handle management of include paths
 
  * [Ruby](http://www.ruby-lang.org/en/) v1.9.3 or above
  * [libcurl](http://curl.haxx.se/libcurl/) (client only)
- * [sqlite3](http://www.sqlite.org/) (server only)
- * [mysql](http://www.mysql.com/) or [mariaDB](https://mariadb.org/) (server only)
+ * [sqlite3](http://www.sqlite.org/) or [mysql](http://www.mysql.com/) or [mariaDB](https://mariadb.org/) (server only)
  * Some supporting gems:
    * simplerpc
-   * sqlite3 (server only)
-   * mysql2 (server only)
+   * sqlite3 or mysql2 (server only)
    * curb (client only)
 
 To install, simply run:

@@ -6,18 +6,20 @@ The client is responsible for applying to the server and accessing the web in or
 
 Server
 ------
-This section defines which server to connect to.
+This section defines which server to connect to.  This section contains configuration for [SimpleRPC](http://stephenwattam.com/projects/simplerpc/), and supports all features it does.  Only the salient ones are documented here.
 
  * `address`    --- The IP address or hostname at which to contact the server
  * `port`       --- The port to use when contacting the server
- * `serialiser` --- The serialisation method to use when communicating with the server.  Options are `:marshal`, `:json` or `:yaml`.  Of these `:marshal` is by far the fastest.  Later versions of LWAC will likely support `:msgparse`, which is faster still.
+ * `password`   --- Optional.  The password to use for auth (must match server config)
+ * `secret`     --- Optional.  The encryption key to use when sending the password (must match server config)
 
 For example:
 
     :server:
       :address: "127.0.0.1"
       :port: 27401
-      :serialiser:  :marshal
+      :password: lwacpass
+      :secret: egrniognhre89n34ifnui4n8gf490
 
 Network
 -------
