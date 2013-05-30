@@ -56,8 +56,6 @@ module LWAC
     #
     # Raise SIGINT to stop.
     def work
-      last_batch_size = 0
-
       loop{ 
 
         # Delay to stop us eating CPU when spinning
@@ -145,7 +143,7 @@ module LWAC
       $log.info "Requesting a new batch of #{@config[:client][:batch_capacity]} links..."
 
       loop do
-        ret = connect do |s|
+        ret = rpc do |s|
           s.check_out(LWAC::VERSION, @uuid, @config[:client][:batch_capacity])
         end
 
@@ -169,6 +167,7 @@ module LWAC
           $log.warn "Received unrecognised return from server of type: #{ret.class}.  Retrying..."
           $log.debug "Server said: '#{ret}'"
           increment_reconnection_timer
+          # raise 'Invalid return from server'
         end
       end
 
@@ -194,7 +193,7 @@ module LWAC
 
         # send datapoints
         $log.info "Sending #{@pending.length} datapoints (~#{pending_size.round(2)}MB) to server..."
-        connect do |s|
+        rpc do |s|
           s.check_in(LWAC::VERSION, @uuid, @pending)
         end
         $log.debug "Done."
@@ -223,71 +222,66 @@ module LWAC
       end
 
       $log.info "Cancelling at least #{@links.length} links."
-      connect do |s|
+      rpc do |s|
         s.cancel(LWAC::VERSION, @uuid)
       end
 
     end
 
     # Connect to the server, using backoff as described in the config file
-    def connect(&block)
-      $log.debug "Connecting to server #{@config[:server][:address]}:#{@config[:server][:port]}..."
+    def rpc(&block)
+      $log.debug "Connecting to server #{@rpc_client.hostname}:#{@rpc_client.port}..."
 
-      while(not @rpc_client.connected?) do
-        begin
-
-          # Check reconnect timer and delay if it tells us to
-          if @rc_time > Time.now.to_i then
-            $log.info "Rate limiting self for #{@rc_time - Time.now.to_i}s until #{Time.at(@rc_time)}..."
-            sleep(@rc_time - Time.now.to_i)
-          end
-
-
-          # Attempt to connect with the connect_timeout set
-          Timeout::timeout(@config[:network][:connect_timeout]){
-            @rpc_client.connect
-          }
-
-        # On error
-        rescue StandardError => e
-          
-          # Network Errors
-          case e
-          when SimpleRPC::AuthenticationError, Timeout::Error, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
-            increment_reconnection_timer
-          else
-            # Continue to pass error up
-            raise e
-          end
-          
-          # Compute reconnection time
-          compute_reconnection_time
-
-          # Warn the user and wait until it's time to try again
-          $log.warn "Failed to connect (#{e})."
-        end
-      end
-
-      compute_reconnection_time
-
-      # Start doing things!  Register as a client
-      $log.debug "Done.  Yielding to perform actions."
-
-      # Then yield the service to our caller
       response = nil
+
       begin
+
+        # Check reconnect timer and delay if it tells us to
+        if @rc_time > Time.now.to_i then
+          $log.info "Rate limiting self for #{@rc_time - Time.now.to_i}s until #{Time.at(@rc_time)}..."
+          sleep(@rc_time - Time.now.to_i)
+        end
+
+
+        # Attempt to connect with the connect_timeout set
+        $log.debug "Connecting RPC client..."
+        Timeout::timeout(@config[:network][:connect_timeout]){
+          @rpc_client.persist
+        }
+
+        # Yield to perform actions
         response = yield(@rpc_client)
+
+        # Success demands that we reset this...
+        reset_reconnection_timer
+
+      # On error
       rescue StandardError => e
-        $log.error "Error during operation: #{e}"
-        $log.debug e.backtrace.join("\n")
+
+        # Network Errors
+        case e
+        when SimpleRPC::AuthenticationError, Timeout::Error, 
+          Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH
+          increment_reconnection_timer
+        else
+          $log.error "Error during operation: #{e}"
+          $log.debug e.backtrace.join("\n")
+          # Continue to pass error up
+          raise e
+        end
+        
+        # Compute reconnection time
+        compute_reconnection_time
+
+        # Warn the user and wait until it's time to try again
+        $log.warn "Failed to connect (#{e})."
       ensure
-        # When done, disconnect
+        # Disconnect rpc lib
+        $log.debug "Disconnecting RPC client..."
         @rpc_client.disconnect
-        $log.debug "Disconnected."
       end
 
-      # success means...
-      reset_reconnection_timer
+      $log.debug "RPC Done."
 
       return response
     end

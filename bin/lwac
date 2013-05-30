@@ -44,7 +44,7 @@ case tool
       rescue SignalException => e
         $log.fatal "Caught Signal: #{e}"
         # $log.debug "#{e.backtrace.join("\n")}"
-        break;
+        break
       end
 
       $log.info "Restarting server after a short delay..."

@@ -87,7 +87,7 @@
   :logs:                          # A list of log outputs
     :default:                       # Call this log "default"
       :dev: STDOUT                  # Where to log.  Give a filename, or use 'STDOUT' or 'STDERR'
-      :level: :debug                # Level to log.  One of :debug, :warn, :info, :error, or :fatal
+      :level: :info                # Level to log.  One of :debug, :warn, :info, :error, or :fatal
     #:errors:
       #:dev: 'logs/server.err'
       #:level: :warn                                              

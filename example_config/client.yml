@@ -18,7 +18,7 @@
   :check_in_size: 200                     # How large chunks should be when checking in in MB.  
   :strict_cache_limit: true             # Prevents workers from adding to the cache if it grows beyond check_in_size.  May slow down progress depending on batch size, but enforces memory limits more effectively
   :simultaneous_workers: 200                # Simultaneous workers bigger is more parallel.
-  :cache_dir: /tmp/       # Set to nil to use ram
+  :cache_dir:        # Set to nil to use ram
   # :cache_file: /tmp/       # Set to nil to use ram
 :logging:                                 # Log output options
   :progname: Client                         # Name used in logs
