@@ -242,7 +242,7 @@ module LWAC
                   progress = announce(count, progress, @estimated_lines, @config[:output][:announce] ) 
                 else
                   @estimated_lines -= 1
-                  $log.info "Discarded datapoint #{data.datapoint.id} due to filter (revised estimate: #{@estimated_lines} lines)."
+                  $log.debug "Discarded datapoint #{data.datapoint.id} due to filter (revised estimate: #{@estimated_lines} lines)."
                 end
               } # end per-datapoint loop
             end # end sample if
@@ -250,7 +250,7 @@ module LWAC
 
           else # else filter out this sample
             @estimated_lines -= data.sample.size
-            $log.info  "Discarded sample #{data.sample.id} due to filter (revised estimate: #{@estimated_lines} lines)."
+            $log.debug  "Discarded sample #{data.sample.id} due to filter (revised estimate: #{@estimated_lines} lines)."
           end # end filter IF
 
 

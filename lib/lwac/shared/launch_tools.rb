@@ -64,7 +64,7 @@ module LWAC
         logdevs << ld
       }
     end
-    $log = MultiOutputLogger.new(logdevs, config[:logging][:progname])
+    $log = MultiOutputLogger.new(logdevs, config[:logging][:progname].to_s)
 
     
     

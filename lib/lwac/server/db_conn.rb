@@ -310,6 +310,15 @@ module LWAC
 
     # Create database
     def self.create_database( config )
+
+      begin
+        require 'sqlite3'
+      rescue LoadError
+        $log.fatal "Your current configuration is trying to use the 'sqlite3' gem, but it is not installed."
+        $log.fatal "To install, run 'gem install sqlite3 --version \"~> 1.3\"'"
+        raise "Gem not found."
+      end
+
       SQLite3::Database.new(config[:filename]) do |db|
       end
     end

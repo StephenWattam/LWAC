@@ -1,7 +1,7 @@
 ---
 :server:                                # Options affecting which server to use
-  :address: "127.0.0.1"                   # IP or hostname
-  :port: 27401                            # Port
+  :hostname: localhost                   # IP or hostname
+  :port: 27000                            # Port
   :password: lwacpass
   :secret: grnionfgn89540ng8953n8g0n54890gn90345ng95noe4ig54nio # encryption key
 :network:                               # Network behaviour when talking to the server
