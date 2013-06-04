@@ -18,6 +18,12 @@ module LWAC
       @rates        = {}  # estimates for how fast clients are
     end
 
+    # Returns the nonce given, designed as a quick ping when the client starts up
+    def ping(client_id, nonce)
+      $log.info "Client #{client_id} pinged the server."
+      return nonce
+    end
+
     # Returns either a list of Link objects or a delay to wait for (FixNum)
     def check_out(client_id, request)
       links = nil
@@ -82,16 +88,16 @@ module LWAC
       # Check we have actually checked them out
       check_in_list = []
       erroneous     = 0
-      datapoints.each{|dp|
-        if(@dispatched[client_id] and @dispatched[client_id].values.map{|l| l.id}.include? dp.link.id) then
+      datapoints.each do |dp|
+        if @dispatched[client_id] && @dispatched[client_id].values.map{ |l| l.id }.include?(dp.link.id)
           $log.debug "Adding #{dp} to check-in list"
           check_in_list << dp
           @dispatched[client_id].delete(dp.link.id)
         else
           # puts "***************************** #{dp}"
-          erroneous += 1 
+          erroneous += 1
         end
-      }
+      end
 
       $log.error "Failed to check in #{erroneous} datapoint[s] which were not checked out to him." if erroneous > 0
 
@@ -102,7 +108,8 @@ module LWAC
       end
 
       # Estimate client's work rate based on the amount it's done.
-      compute_client_rate(client_id, check_in_list.length)
+      rate = compute_client_rate(client_id, check_in_list.length)
+      $log.debug "Client #{client_id} is working at #{@rates[client_id].round(2)} links/s" if rate
 
       # then check them in
       @cm.check_in(check_in_list)
@@ -110,6 +117,9 @@ module LWAC
       $log.debug "Check in complete"
       
       summary
+
+      # Report errors checking in, and client rate
+      return [erroneous, rate]
     end
 
     # Returns nil
@@ -156,8 +166,9 @@ module LWAC
     def compute_client_rate(client_id, num_links)
       if @rates[client_id].is_a?(Time) then
         @rates[client_id] = num_links / (Time.now - @rates[client_id]).to_f
-        $log.debug "Client #{client_id} is working at #{@rates[client_id].round(2)} links/s"
+        return @rates[client_id]
       end
+      return nil
     end
 
     # Use past experience to compute a timeout for a given client
@@ -240,15 +251,19 @@ module LWAC
     end
 
     # Send links to a user, and keep track of who asked for them
+    def ping(version, client_id, nonce)
+      version_check(version)
+      MUTEX.synchronize{
+        @server.ping(client_id, nonce)
+      }
+    end
+
+    # Send links to a user, and keep track of who asked for them
     def check_out(version, client_id, number_requested)
       version_check(version)
       MUTEX.synchronize{
         @server.check_out(client_id, number_requested)
       }
-    rescue StandardError => e
-      $log.error "Exception: #{e}"
-      $log.debug e.backtrace.join("\n")
-      return []
     end
     
     # Accept datapoints back from the user
@@ -257,10 +272,6 @@ module LWAC
       MUTEX.synchronize{
         @server.check_in(client_id, datapoints)
       }
-    rescue StandardError => e
-      $log.error "Exception: #{e}"
-      $log.debug e.backtrace.join("\n")
-      return nil
     end
 
     # Cancel links ahead of time
@@ -269,10 +280,6 @@ module LWAC
       MUTEX.synchronize{
         @server.cancel(client_id)
       }
-    rescue StandardError => e
-      $log.error "Exception: #{e}"
-      $log.debug e.backtrace.join("\n")
-      return nil
     end
 
   private

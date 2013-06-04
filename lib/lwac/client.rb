@@ -30,6 +30,9 @@ module LWAC
       # Fire up el RPC client...
       @rpc_client = SimpleRPC::Client.new(@config[:server])
 
+      # Don't RPC again until...
+      @rpc_delay    = Time.now
+
       # Construct a new multi-curl thingy
       $log.info "Starting download engine..."
       @dl = Blat::Queue.new(@config[:client][:simultaneous_workers])
@@ -43,14 +46,14 @@ module LWAC
       @link_mx      = Mutex.new
       @cache_mx     = Mutex.new
 
-      # Don't RPC again until...
-      @rpc_delay    = Time.now
-
       # Don't try to acquire more data until...
       @checkout_delay = Time.now
 
       # Start the log with UUID info.
       $log.info "Client started with UUID: #{@uuid}"
+
+      # ping for helpfulness
+      ping
     end
 
     # Poll the server and download from the web, maintaining throughput
@@ -67,34 +70,32 @@ module LWAC
             @dl.add(new_link)
           end
 
-          # Print nice progress output for folks
-          if @config[:client][:announce_progress]
-            # str  = "Links: #{@links.length} pending"
-            # str += ", #{@dl.request_count}/#{@config[:client][:simultaneous_workers]} active"
-            # str += ", #{@cache.length} complete"
-            # str += " (#{(@cache_bytes/1024/1024).round(2)}/#{(@config[:client][:cache_limit].to_f/1024/1024).round(2)}MB)"
-            # $log.info(str)
+          # Read things safely using a mutex
+          link_len          = @link_mx.synchronize { @links.length }
+          active_requests   = @dl.request_count
+          cache_len, bytes  = @cache_mx.synchronize { [@cache.length, @cache_bytes] }
 
-            # # TODO: major thread safety issue with links refs.
-            progress_mb      = @cache_bytes.to_f / 1024 / 1024
+          # Print nice progress output for folks
+          if @config[:client][:announce_progress] && (link_len > 0 || cache_len > 0 || active_requests > 0)
+            progress_mb      = bytes.to_f / 1024 / 1024
             limit_mb         = @config[:client][:cache_limit].to_f / 1024 / 1024
             pc_progress      = (progress_mb / limit_mb) * 100
 
-            str =  "#{progress_bar(@config[:client][:cache_limit], @cache_bytes)} #{pc_progress.round}%"
+            str =  "#{progress_bar(@config[:client][:cache_limit], bytes)} #{pc_progress.round}%"
             str += " #{progress_mb.round(2)}/#{limit_mb.round(2)}MB"
-            str += " (#{@links.length} pend, #{@dl.request_count} active, #{@cache.length} done)"
-            str += " #{(@links.length == 0 && Time.now < @checkout_delay) ? "[waiting #{(@checkout_delay - Time.now).round}s]" : ''}"
+            str += " (#{link_len} pend, #{active_requests} active, #{cache_len} done)"
+            str += " #{(link_len == 0 && Time.now < @checkout_delay) ? "[waiting #{(@checkout_delay - Time.now).round}s]" : ''}"
             
             $log.info(str)
           end
 
           # Run out of links
-          if @links.length <= 0 && Time.now > @checkout_delay 
+          if link_len <= 0 && Time.now > @checkout_delay 
             acquire_links
           end
 
           # Downloaded enough data already
-          if (@dl.idle? || @cache_bytes > @config[:client][:cache_limit]) && @cache.length > 0
+          if (@dl.idle? || bytes > @config[:client][:cache_limit]) && cache_len > 0
             # (@pool.cache_size.to_f / 1024.0 / 1024.0) > @config[:client][:cache_limit] then
             # Send completed points back to the server
             send_cache
@@ -132,6 +133,21 @@ module LWAC
     end
 
   private
+
+    # Pings the server to test RPC methods
+    def ping
+      $log.info "Pinging server..."
+      nonce = Random.rand(82349849)
+      reply = rpc(1) do |s|
+        s.ping(LWAC::VERSION, @uuid, nonce)
+      end
+      
+      unless nonce == reply
+        $log.warn "Failed to ping server!  Please check your network properties."
+      else
+        $log.info "Your network setup seems to work, that's good news :-)"
+      end
+    end
 
     # Returns a cURL::Easy object for downloading
     def get_curl
@@ -237,10 +253,15 @@ module LWAC
 
         # send datapoints
         $log.info "Sending #{pending.length} datapoints (~#{(pending_size.to_f / 1024 / 1024).round(2)}MB) to server..."
-        rpc do |s|
+        ret = rpc do |s|
           s.check_in(LWAC::VERSION, @uuid, pending)
         end
-        $log.debug "Done."
+        if ret.is_a?(Array)
+          $log.info "Done (server reported #{ret[0]} failures)"
+          $log.info "Server reports work rate as #{ret[1].to_f.round(2)} links/s" if ret[1]
+        else
+          $log.warn "Server returned something unexpected when checking in."
+        end
       end
 
       # Here cache_to_send.length == 0, so wipe the cache
@@ -255,7 +276,7 @@ module LWAC
       failed = true
       ret    = nil
       rpc_delay_increment = @config[:network][:minimum_reconnect_time]
-      while (retries -= 1) != 0 && failed do
+      while (retries -= 1) != -1 && failed do
 
         # Delay until the point we were asked to
         if @rpc_delay > Time.now
@@ -264,10 +285,23 @@ module LWAC
         end
 
         begin
+
           ret = yield(@rpc_client.get_proxy)
           failed = false
-        rescue StandardError => e
-          $log.error "Error during RPC call: #{e}"
+
+        # This looks funny, and is, but I double-catch in order
+        # to handle remote exceptions, which extend exception but not
+        # standarderror
+        rescue SignalException => se
+          raise se
+        rescue Exception => e
+
+          if e.is_a?(SimpleRPC::RemoteException)
+            $log.error "Server reported error: #{e}"
+          else
+            $log.error "Local error during RPC call: #{e}"
+          end
+
           $log.debug "#{e.backtrace.join("\n")}"
           failed = true
 
@@ -296,7 +330,7 @@ module LWAC
       filename = nil
       filename = File.join(@config[:client][:cache_dir], rand.hash.abs.to_s) if @config[:client][:cache_dir]
 
-      $log.info "Creating cache #{(@config[:client][:cache_dir] == nil) ? "in RAM" : "at #{filename}"}..."
+      $log.debug "Creating cache #{(@config[:client][:cache_dir] == nil) ? "in RAM" : "at #{filename}"}..."
       return Store.new(filename)
     end
 
