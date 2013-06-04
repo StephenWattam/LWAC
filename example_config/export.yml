@@ -3,9 +3,9 @@
 :output:                              # Output config, which is pretty much everything
   :announce: 2000                       # Every nth line, update the UI
 
-  :formatter: :multixml                      # :csv for single-file csv output, :multicsv for one-csv-per-point, :json for json file,  :multitemplate for one-erb-per-point
+  :formatter: :multitemplate                      # :csv for single-file csv output, :multicsv for one-csv-per-point, :json for json file,  :multitemplate for one-erb-per-point
   :formatter_opts:
-    :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.xml                 # Write to this file or directory, depending on exporter system
+    :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.html                 # Write to this file or directory, depending on exporter system
     # :filename: exported_data/sample_#{data.sample.id}/#{data.datapoint.id}.csv                 # Write to this file or directory, depending on exporter system
     # :filename: export.csv               # Multicsv and template option.  Select filename from one of the keys in the line
     :template: example_config/export_template_html_sampler.erb

@@ -1,0 +1,110 @@
+<%
+    
+# -----------------------------------------------------------------------------
+# Escape HTML and URI-encode.  You may wish to re-use these
+#
+require 'uri'
+require 'cgi'
+
+# URLencoding
+def u(str)
+  return URI::encode(str.to_s)
+end
+
+# HTML encoding
+def h(str)
+  return CGI.escapeHTML(str.to_s)
+end
+
+# -----------------------------------------------------------------------------
+
+
+
+
+# Describe this resource in a nice html-friendly way
+def describe(what)
+    str = "<dl>"
+  what.__params.each{|p|
+    # Load the value
+    val = eval("what.#{p}")
+
+    # Output the string
+    str += "<dt>#{p}</dt><dd>"
+    if val.is_a? Resource
+        str += "#{describe(val)}" 
+    else
+        str += "#{h val.to_s}"
+    end
+    str += "</dd>\n"
+  }
+  str += "</dl>"
+  return str
+end
+
+
+# Provide a nice truncated output for summaries
+class String
+  def truncate(lim, ellipsis='...', pad=' ')
+    ellipsis = '' if self.length <= lim
+    return ellipsis[ellipsis.length - lim..-1] if lim <= ellipsis.length
+    return self[0..(lim - ellipsis.length)-1] + ellipsis + (pad * [lim - self.length, 0].max)
+  end
+end
+
+
+%>
+<html>
+    <head>
+        <title>File Summary for <%=data.datapoint.uri%></title>
+
+        <style type="text/css">
+            dt{ font-weight: bold; }
+            dd{ font-family: monospace; }
+            .mono{
+                font-family: monospace;
+            }
+            .headers{
+                border: solid 1px black;
+                background: #eee;
+                padding: 0.3em;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Datapoint #<%=data.datapoint.id%>&mdash;<%=h data.datapoint.uri.to_s.truncate(20)%></h1>
+        <h2>In sample #<%=data.sample.id%>, taken at <%=data.sample.start_time%></h2>
+        <hr/>
+        <h3>Server</h3>
+        <p>The server that downloaded this datapoint completed <%=data.server.complete_sample_count%> sample(s), and is due to run again at <%=Time.at(data.server.next_sample_date)%>.  The server will sample every <%= data.server.config.sampling_policy.sample_time/3600 %> hours.</p>
+
+
+        <p>Workers were instructed to redirect <%= data.server.config.client_policy.curl_workers.max_redirects %> times, with an overall timeout of <%= data.server.config.client_policy.curl_workers.timeout %>s.</p>
+
+
+        <h3>Sample <%=data.sample.id%></h3>
+        <p>This sample contained <%=data.sample.size %> links, totalling <%= (data.sample.size_on_disk / 1024 / 1024).round %>MB.  It took <%= data.sample.duration.round %> seconds to complete, starting at <%=data.sample.start_time%> and ending at <%=data.sample.end_time%>.</p>
+
+
+        <h3>Datapoint <%=data.datapoint.id%></h3> 
+        <p>This datapoint was downloaded from <span class="mono"><%=h data.datapoint.uri %></span> by client <span class="mono"><%=h data.datapoint.client_id %></span>.</p>
+
+        <p>In total, the client took <%= data.datapoint.response.total_time.round(2) %>s to download <%= (data.datapoint.response.downloaded_bytes / 1024).round(2)%> KB.</p>
+
+        <p>After redirecting for <%= data.datapoint.response.redirect_time %>s, data was returned from the server with code <%= data.datapoint.response.response_code %> from the URI <span class="mono"><%= data.datapoint.response.last_effective_url %></span>.  <%=data.datapoint.head.length%>b of headers were returned, comprising <%=data.datapoint.headers.__params.length%> entries.  They are as below:</p>
+
+        <pre class="headers mono"><%=h data.datapoint.head%></pre>
+
+        <p>The body is <%=data.datapoint.body.length%>b in length, but isn't printed to this file because the CSS normally makes everything here unreadable</p>
+
+
+
+        <h2>All Data</h2>
+        <p>Below is a hierachical listing of all available data properties and their values.</p>
+        <pre>
+<%=h data.describe%>
+        </pre>
+
+    </body>
+
+</html>
+

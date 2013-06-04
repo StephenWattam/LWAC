@@ -66,6 +66,10 @@ module LWAC
     end
     $log = MultiOutputLogger.new(logdevs, config[:logging][:progname].to_s)
 
+    # Apply nicer log output format
+    $log.formatter = proc do |severity, datetime, progname, msg|
+      "#{severity.to_s[0]} #{progname} [#{datetime.strftime('%y-%m-%d %H:%M:%S')}] #{msg}\n"
+    end
     
     
     # Handle signals nicely.

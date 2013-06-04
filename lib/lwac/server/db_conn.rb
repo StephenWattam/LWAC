@@ -192,14 +192,14 @@ module LWAC
     
     def start_transaction
       if not @transaction
-        @db.query("START TRANSACTION;") 
+        @db.query("START TRANSACTION;", false) 
         @transaction = true
       end
     end
 
     def end_transaction
       if @transaction then
-        @db.query("COMMIT;") 
+        @db.query("COMMIT;", false) 
         @transaction_count = 0
         @transaction = false
       end
@@ -238,6 +238,7 @@ module LWAC
 
     # Disconnect from the database.
     def close
+      end_transaction if @transaction
       @db.close
     end
 
@@ -292,6 +293,9 @@ module LWAC
     def execute(sql, trans=true)
       start_transaction if trans
       end_transaction if @transaction and not trans 
+
+      # Return if no sql given
+      return unless sql
 
       $log.debug "SQLite3: #{sql}"
 
@@ -350,20 +354,17 @@ module LWAC
       }
     end
 
-    def disconnect
-      end_transaction if @transaction
-      @db.close
-    end
-    
     def start_transaction
       if not @transaction
-        @db.execute("BEGIN TRANSACTION;") 
+        $log.debug "SQLite3: BEGIN TRANSACTION;"
+        @db.execute("BEGIN TRANSACTION;")
         @transaction = true
       end
     end
 
     def end_transaction
       if @transaction then
+        $log.debug "SQLite3: COMMIT TRANSACTION;"
         @db.execute("COMMIT TRANSACTION;") 
         @transaction_count = 0
         @transaction = false

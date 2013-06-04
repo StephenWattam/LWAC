@@ -36,7 +36,16 @@ module LWAC
       end
 
       # Actual stuff---create the db
-      @dbclass.create_database( db_conf[:engine_conf] )
+      begin
+        @dbclass.create_database( db_conf[:engine_conf] )
+      rescue StandardError => e
+        if db_conf[:engine] == :sqlite
+          $log.fatal "Failed to create database.  Does the parent directory exist?"
+        else
+          $log.fatal "Failed to create database.  Is the server running?"
+        end
+        raise e
+      end
 
       # Apply schema
       db = @dbclass.new( db_conf[:engine_conf] )
@@ -55,7 +64,7 @@ module LWAC
     def import(list)
       begin
         $log.info "Connecting to database..."
-        connect_to_db
+        db = connect_to_db
         $log.info "Importing links..."
         count = 0
         last_notify = Time.now
@@ -67,7 +76,7 @@ module LWAC
           line.chomp!
           if line.length > 0 then
             count += 1
-            @db.insert_link(line)
+            db.insert_link(line)
           end
 
           # Print some progress
@@ -77,12 +86,13 @@ module LWAC
           end
 
         }
-        close
         print "\n" if $stdout.tty?
-        $log.info "\nAdded #{count} link[s]."
+        $log.info "Added #{count} link[s]."
       rescue StandardError => e
         $log.fatal "#{e}"
         $log.debug "#{e.backtrace.join("\n")}"
+      ensure
+        db.close if db
       end
     end
 
@@ -133,12 +143,7 @@ module LWAC
       end
 
       # Create new storage manager with config in read-write mode
-      @db = DatabaseStorageManager.new(@server_config[:storage][:database], false) 
-    end
-
-    # Close the db connections
-    def close
-      @db.close 
+      return DatabaseStorageManager.new(@server_config[:storage][:database], false) 
     end
 
   end

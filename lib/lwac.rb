@@ -4,7 +4,7 @@ module LWAC
   # Overall LWAC version, as in the git tags
   VERSION = '0.2.0b'
   # Date of last significant edit
-  DATE    = '31-05-13'
+  DATE    = '04-06-13'
 
   # Authors
   AUTHORS = [
