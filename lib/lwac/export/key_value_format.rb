@@ -119,11 +119,13 @@ module LWAC
       return line 
 
     rescue StandardError => e
-      $log.fatal "Error producing output: #{e}"
-      $log.fatal "This is probably a bug in your formatting expressions."
-      $log.fatal "Currently formatting '#{current}'." if current
-      $log.fatal "Backtrace: \n#{e.backtrace.join("\n")}"
-      exit(1)
+      $log.error "Error producing output: #{e}"
+      $log.error "This is probably a bug in your formatting expressions."
+      $log.error "Currently formatting '#{current}'." if current
+      $log.error "Backtrace: \n#{e.backtrace.join("\n")}"
+      $log.error "I'm going to continue because the alternative is giving up entirely"
+      return 'ERROR'
+      # exit(1)
     end
 
   end

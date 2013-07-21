@@ -234,7 +234,6 @@ For example:
     :server:
       :hostname:
       :port: 27401
-      :serialiser:  :marshal
       :password: lwacpass
       :secret: egrniognhre89n34ifnui4n8gf490
 

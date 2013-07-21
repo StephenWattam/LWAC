@@ -1,14 +1,14 @@
 Gem::Specification.new do |s|
   # About the gem
   s.name        = 'lwac'
-  s.version     = '0.2.0b'
+  s.version     = '0.2.0'
   s.date        = '2013-04-22'
   s.summary     = 'Longitudinal Web-as-Corpus sampling'
   s.description = 'A tool to construct longitudinal corpora from web data'
   s.author      = 'Stephen Wattam'
   s.email       = 'stephenwattam@gmail.com'
   s.homepage    = 'http://stephenwattam.com/projects/LWAC'
-  s.required_ruby_version =  ::Gem::Requirement.new(">= 1.9")
+  s.required_ruby_version =  ::Gem::Requirement.new(">= 2.0")
   s.license     = 'CC-BY-NC-SA 3.0' # Creative commons by-nc-sa 3
   
   # Files + Resources

@@ -1,6 +1,6 @@
 ---
 :storage:                       # Options affecting the data storage engine
-  :root: corpus.redir                   # A path to the corpus directory  (root/)
+  :root: corpus                   # A path to the corpus directory  (root/)
   :state_file: state          # What to call the file where server state is stored  (root/state_file)
   :sample_subdir: samples         # Where to keep samples (root/sample_subdir)
   :sample_filename: sample    # What to call each file (root/sample_subdir/id/sample.yml
@@ -9,7 +9,7 @@
   :database:                      # Config options affecting the metadata database
     :engine: :sqlite              # :sqlite or :mysql
     :engine_conf:
-      :filename: corpus.redir/links.db      # Name of the database, relative to corpus root (root/filename)
+      :filename: corpus/links.db      # Name of the database, relative to corpus root (root/filename)
       :transaction_limit: 100         # How many requests per transaction.  Larger numbers yield a speed boost at the expense of data security and memory use.
       :pragma:                        # Custom pragmas.  See SQLite's docs.  Default settings yield speed and fair data security
         "locking_mode": "EXCLUSIVE"     # Do not allow others to access the db when the server is running
@@ -34,7 +34,7 @@
       :id: id                         # The ID field is called 'id' by default  
       :uri: uri                       # The field with the URIs in it is called 'uri' by default
 :sampling_policy:               # Defines sampling times
-  :sample_limit:  0               # Stop at the nth sample (or refuse to sample if n is already over this!)
+  :sample_limit:                 # Stop at the nth sample (or refuse to sample if n is already over this!) Set to nil to disable
   :sample_time: 60 #43200              # Sample every n seconds (i.e. 3600 for hourly, 86400 for daily, etc)
   :sample_alignment: 0 #28800            # Sample alignment.  Set to 0 for sampling 'on the hour'/'midnight', etc
 :client_policy:

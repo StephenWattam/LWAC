@@ -169,15 +169,20 @@ module LWAC
 
       # Set completion handler
       curl.on_complete do |res|
+        datapoint = nil
         begin
           datapoint = LWAC::DataPoint.from_request(link[:config], link[:link], res, @uuid, nil) # TODO: set error if needed.
+        rescue StandardError => e
+          $log.error "Error during request standardisation: #{e}"
+          $log.debug "#{e.backtrace.join("\n")}"
+        
+          # Insert error if the above failed
+          datapoint = LWAC::DataPoint.new(link[:link], {}, '', '', {}, @uuid, e) if !datapoint
+        ensure
           @cache_mx.synchronize do
             @cache[link[:link].id] = datapoint
             @cache_bytes += res.downloaded_bytes
           end
-        rescue StandardError => e
-          $log.error "Error during request standardisation: #{e}"
-          $log.debug "#{e.backtrace.join("\n")}"
         end
         $log.debug "Link #{link[:link].id} downloaded."
       end

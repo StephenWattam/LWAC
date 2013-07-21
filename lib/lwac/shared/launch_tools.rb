@@ -10,10 +10,11 @@ require 'lwac/shared/multilog'
 module LWAC
 
   def self.print_usage
-    $stderr.puts "USAGE: #{$0} TOOL CONFIG"
+    $stderr.puts "USAGE: #{$PROGRAM_NAME} TOOL CONFIG [IMPORT_FILE]"
     $stderr.puts ""
-    $stderr.puts " TOOL   : one of 'server', 'client', 'import' or 'export'"
-    $stderr.puts " CONFIG : A path to the config file for the tool"
+    $stderr.puts " TOOL        : one of 'server', 'client', 'import' or 'export'"
+    $stderr.puts " CONFIG      : A path to the config file for the tool"
+    $stderr.puts " IMPORT_FILE : A URL list to import"
     $stderr.puts ""
   end
 

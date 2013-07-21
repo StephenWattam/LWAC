@@ -146,7 +146,6 @@ module LWAC
       summary
     end
 
-
     # Close all resources and get ready to quit
     def close
       $log.fatal "Closing DownloadServer cleanly..."
@@ -232,7 +231,6 @@ module LWAC
       end
 
     end
-
 
   end
 
